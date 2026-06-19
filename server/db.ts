@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, patients, vitals, medications, alerts, medicationReminders, complianceRecords } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,174 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Patient queries
+export async function getPatientByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(patients).where(eq(patients.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getPatientsByDoctorId(doctorId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(patients).where(eq(patients.assignedDoctorId, doctorId));
+}
+
+export async function createPatient(patientData: typeof patients.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(patients).values(patientData);
+  return result;
+}
+
+export async function updatePatient(patientId: number, updates: Partial<typeof patients.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.update(patients).set(updates).where(eq(patients.id, patientId));
+}
+
+// Vital signs queries
+export async function getLatestVitalsByPatientId(patientId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(vitals)
+    .where(eq(vitals.patientId, patientId))
+    .orderBy(vitals.recordedAt)
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getVitalHistoryByPatientId(patientId: number, limit: number = 100) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(vitals)
+    .where(eq(vitals.patientId, patientId))
+    .orderBy(vitals.recordedAt)
+    .limit(limit);
+}
+
+export async function createVital(vitalData: typeof vitals.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.insert(vitals).values(vitalData);
+}
+
+// Alert queries
+export async function getActiveAlertsByPatientId(patientId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(alerts)
+    .where(and(eq(alerts.patientId, patientId), eq(alerts.status, "active")));
+}
+
+export async function getAllAlertsByPatientId(patientId: number, limit: number = 100) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(alerts)
+    .where(eq(alerts.patientId, patientId))
+    .orderBy(alerts.triggeredAt)
+    .limit(limit);
+}
+
+export async function createAlert(alertData: typeof alerts.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.insert(alerts).values(alertData);
+}
+
+export async function updateAlert(alertId: number, updates: Partial<typeof alerts.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.update(alerts).set(updates).where(eq(alerts.id, alertId));
+}
+
+// Medication queries
+export async function getMedicationsByPatientId(patientId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(medications)
+    .where(and(eq(medications.patientId, patientId), eq(medications.status, "active")));
+}
+
+export async function createMedication(medData: typeof medications.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.insert(medications).values(medData);
+}
+
+// Medication reminder queries
+export async function getPendingMedicationReminders() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(medicationReminders)
+    .where(eq(medicationReminders.status, "pending"));
+}
+
+export async function getMedicationRemindersByPatientId(patientId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(medicationReminders)
+    .where(eq(medicationReminders.patientId, patientId))
+    .orderBy(medicationReminders.reminderDate);
+}
+
+export async function createMedicationReminder(reminderData: typeof medicationReminders.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.insert(medicationReminders).values(reminderData);
+}
+
+export async function updateMedicationReminder(reminderId: number, updates: Partial<typeof medicationReminders.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.update(medicationReminders).set(updates).where(eq(medicationReminders.id, reminderId));
+}
+
+// Compliance queries
+export async function getComplianceByPatientAndMedication(patientId: number, medicationId: number, date: Date) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(complianceRecords)
+    .where(and(
+      eq(complianceRecords.patientId, patientId),
+      eq(complianceRecords.medicationId, medicationId),
+      eq(complianceRecords.date, date)
+    ))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createComplianceRecord(complianceData: typeof complianceRecords.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.insert(complianceRecords).values(complianceData);
+}
+
+export async function updateComplianceRecord(complianceId: number, updates: Partial<typeof complianceRecords.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.update(complianceRecords).set(updates).where(eq(complianceRecords.id, complianceId));
+}
