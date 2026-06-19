@@ -40,15 +40,14 @@ export default function RoleSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-white">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <div className="min-h-screen hh-gradient-soft">
+      <header className="bg-white/95 backdrop-blur-md border-b border-border sticky top-0 z-40 shadow-[var(--hh-shadow-sm)]">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 hh-gradient-bg rounded-lg flex items-center justify-center shadow-sm shadow-primary/25">
               <Heart className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg text-gray-900">ICU Guardian AI</span>
+            <span className="font-bold text-lg text-foreground tracking-tight">HealthHalo</span>
           </div>
           <Button variant="outline" onClick={handleLogout} className="flex gap-2">
             <LogOut className="w-4 h-4" />
@@ -62,19 +61,19 @@ export default function RoleSelection() {
         <div className="max-w-4xl mx-auto">
           {/* Welcome Section */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Welcome to ICU Guardian AI</h1>
-            <p className="text-xl text-gray-600 mb-2">Hello, {user?.name}!</p>
-            <p className="text-gray-600">Please select your role to get started</p>
+            <h1 className="text-4xl font-extrabold text-foreground mb-4 tracking-tight">Welcome to HealthHalo</h1>
+            <p className="text-xl text-foreground font-semibold mb-2">Hello, {user?.name}!</p>
+            <p className="text-muted-foreground font-medium">Please select your role to get started</p>
           </div>
 
           {/* Role Selection Cards */}
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             {/* Doctor Role */}
             <Card
-              className={`p-8 cursor-pointer transition-all ${
+              className={`p-8 cursor-pointer transition-all hh-card ${
                 selectedRole === "doctor"
-                  ? "ring-2 ring-primary bg-primary/5"
-                  : "hover:shadow-lg"
+                  ? "ring-2 ring-primary bg-primary/5 shadow-lg shadow-primary/10"
+                  : "hover:shadow-[var(--hh-shadow-md)]"
               }`}
               onClick={() => !isLoading && handleRoleSelect("doctor")}
             >
@@ -129,7 +128,7 @@ export default function RoleSelection() {
               className={`p-8 cursor-pointer transition-all ${
                 selectedRole === "patient"
                   ? "ring-2 ring-primary bg-primary/5"
-                  : "hover:shadow-lg"
+                  : "hover:shadow-[var(--hh-shadow-md)]"
               }`}
               onClick={() => !isLoading && handleRoleSelect("patient")}
             >

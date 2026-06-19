@@ -17,8 +17,8 @@ import {
   Search,
   Menu,
   X,
+  type LucideIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -33,7 +33,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+export interface NavItem {
+  icon: LucideIcon;
+  label: string;
+  path: string;
+}
+
+export const adminNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Patients", path: "/dashboard/patients" },
   { icon: Monitor, label: "Live Monitoring", path: "/dashboard/monitoring" },
@@ -47,21 +53,52 @@ const navItems = [
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export const patientNavItems: NavItem[] = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/patient/dashboard" },
+  { icon: Monitor, label: "Live Monitoring", path: "/patient/monitoring" },
+  { icon: Activity, label: "Waveforms", path: "/patient/waveforms" },
+  { icon: Pill, label: "Medications", path: "/patient/medications" },
+];
+
+interface AppLayoutProps {
+  children: React.ReactNode;
+  navItems?: NavItem[];
+  userName?: string;
+  userRole?: string;
+  userInitials?: string;
+  logoutPath?: string;
+  onLogout?: () => void | Promise<void>;
+  searchPlaceholder?: string;
+}
+
+export default function AppLayout({
+  children,
+  navItems = adminNavItems,
+  userName = "Admin",
+  userRole = "ICU Supervisor",
+  userInitials = "AD",
+  logoutPath = "/login/admin",
+  onLogout,
+  searchPlaceholder = "Search patients, alerts...",
+}: AppLayoutProps) {
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowLogout(false);
-    setLocation("/login/admin");
+    if (onLogout) {
+      await onLogout();
+    }
+    setLocation(logoutPath);
   };
 
+  const rootPath = navItems[0]?.path ?? "/dashboard";
   const isActive = (path: string) =>
-    path === "/dashboard" ? location === path : location.startsWith(path);
+    path === rootPath ? location === path : location.startsWith(path);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-background flex">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 lg:hidden"
@@ -69,19 +106,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200",
+          "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-border flex flex-col transition-transform duration-200 shadow-[var(--hh-shadow-md)] lg:shadow-none",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="h-16 flex items-center gap-3 px-5 border-b border-gray-100">
-          <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center shrink-0">
+        <div className="h-16 flex items-center gap-3 px-5 border-b border-border">
+          <div className="w-9 h-9 hh-gradient-bg rounded-lg flex items-center justify-center shrink-0 shadow-sm shadow-primary/30">
             <Heart className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-gray-900 text-sm leading-tight">
-            ICU Guardian AI
+          <span className="font-bold text-foreground text-sm leading-tight tracking-tight">
+            HealthHalo
           </span>
           <button
             className="ml-auto lg:hidden text-gray-500"
@@ -97,10 +133,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <button
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all",
                   isActive(item.path)
-                    ? "bg-primary/10 text-primary"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 <item.icon className="w-4 h-4 shrink-0" />
@@ -110,10 +146,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-gray-100">
+        <div className="p-3 border-t border-border">
           <button
             onClick={() => setShowLogout(true)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Logout
@@ -121,9 +157,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center gap-4 px-4 lg:px-6 sticky top-0 z-30">
+        <header className="h-16 bg-white border-b border-border flex items-center gap-4 px-4 lg:px-6 sticky top-0 z-30 shadow-[var(--hh-shadow-sm)]">
           <button
             className="lg:hidden text-gray-600"
             onClick={() => setSidebarOpen(true)}
@@ -134,25 +169,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search patients, alerts..."
-              className="pl-9 bg-gray-50 border-gray-200"
+              placeholder={searchPlaceholder}
+              className="pl-9 bg-white border-border"
             />
           </div>
 
           <div className="flex items-center gap-3 ml-auto">
-            <button className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-600">
+            <button className="relative p-2 rounded-lg hover:bg-accent text-foreground">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
             </button>
             <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                  AD
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
+                  {userInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium text-gray-900 leading-none">Admin</p>
-                <p className="text-xs text-gray-500 mt-0.5">ICU Supervisor</p>
+                <p className="text-sm font-semibold text-foreground leading-none">{userName}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 font-medium">{userRole}</p>
               </div>
             </div>
           </div>

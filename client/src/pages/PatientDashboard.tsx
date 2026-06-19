@@ -1,119 +1,178 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Heart, Pill, TrendingUp, User, LogOut } from "lucide-react";
-import { useLocation } from "wouter";
+import PatientLayout from "@/components/PatientLayout";
+import ICUMonitorWaveform from "@/components/ICUMonitorWaveform";
+import LiveCameraFeed from "@/components/LiveCameraFeed";
 import VitalSignsCard from "@/components/VitalSignsCard";
-import MedicationRemindersPanel from "@/components/MedicationRemindersPanel";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { liveVitals } from "@/lib/mockData";
+import {
+  Heart,
+  Droplets,
+  Gauge,
+  Wind,
+  Camera,
+  Brain,
+  Shield,
+  TrendingUp,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function PatientDashboard() {
-  const { user, logout } = useAuth();
-  const [, setLocation] = useLocation();
+  const { user, session } = usePatientAuth();
+  const [heartRate, setHeartRate] = useState(75);
+  const [spO2, setSpO2] = useState(97);
+  const patientName = user?.name ?? "John Smith";
+  const patientId = session?.patientId ?? "P001";
 
-  const handleLogout = async () => {
-    await logout();
-    setLocation("/");
-  };
+  useEffect(() => {
+    const id = setInterval(() => {
+      setHeartRate((hr) => Math.round(Math.min(100, Math.max(68, hr + (Math.random() - 0.5) * 2))));
+      setSpO2((o2) => Math.round(Math.min(100, Math.max(94, o2 + (Math.random() - 0.5) * 0.3))));
+    }, 2500);
+    return () => clearInterval(id);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Heart className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-lg text-gray-900">ICU Guardian AI</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.name}</span>
-            <Button variant="outline" onClick={handleLogout} className="flex gap-2">
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
-          </div>
+    <PatientLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="hh-page-title">Dashboard</h1>
+          <p className="hh-page-subtitle">Your health overview and real-time monitoring</p>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Personal Information Card */}
-        <Card className="p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Your Information</h2>
-          <div className="grid md:grid-cols-3 gap-6">
+        <Card className="p-5">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Information</h2>
+          <div className="grid sm:grid-cols-3 gap-4">
             <div>
-              <p className="text-sm text-gray-600 font-medium">Name</p>
-              <p className="text-lg font-semibold text-gray-900">{user?.name}</p>
+              <p className="text-sm text-gray-500">Name</p>
+              <p className="text-base font-semibold text-gray-900">{patientName}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 font-medium">Email</p>
-              <p className="text-lg font-semibold text-gray-900">{user?.email}</p>
+              <p className="text-sm text-gray-500">Patient ID</p>
+              <p className="text-base font-semibold text-gray-900">{patientId}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 font-medium">Status</p>
-              <p className="text-lg font-semibold text-green-600">Active</p>
+              <p className="text-sm text-gray-500">Bed / Room</p>
+              <p className="text-base font-semibold text-gray-900">{session?.bedNo ?? "ICU-01"}</p>
             </div>
           </div>
         </Card>
 
-        {/* Vital Signs Overview */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          <Card className="p-5 lg:col-span-2">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Live Overview — {patientName} ({patientId})
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-red-50 border border-red-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Heart className="w-4 h-4 text-red-500" />
+                  <span className="text-xs font-medium text-red-600">Heart Rate</span>
+                </div>
+                <p className="text-2xl font-bold text-red-700">{heartRate}</p>
+                <p className="text-xs text-red-500 mt-1">bpm</p>
+              </div>
+              <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Droplets className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-medium text-blue-600">SpO₂</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-700">{spO2}%</p>
+                <p className="text-xs text-blue-500 mt-1">Normal range</p>
+              </div>
+              <div className="p-4 rounded-xl bg-green-50 border border-green-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Gauge className="w-4 h-4 text-green-500" />
+                  <span className="text-xs font-medium text-green-600">Blood Pressure</span>
+                </div>
+                <p className="text-2xl font-bold text-green-700">{liveVitals.bloodPressure}</p>
+                <p className="text-xs text-green-500 mt-1">mmHg</p>
+              </div>
+              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wind className="w-4 h-4 text-orange-500" />
+                  <span className="text-xs font-medium text-orange-600">Resp. Rate</span>
+                </div>
+                <p className="text-2xl font-bold text-orange-700">{liveVitals.respiratoryRate}</p>
+                <p className="text-xs text-orange-500 mt-1">breaths/min</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Monitoring Status</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <Camera className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium text-gray-700">Camera</span>
+                </div>
+                <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Active</Badge>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <Brain className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium text-gray-700">Vitals Tracking</span>
+                </div>
+                <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Running</Badge>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium text-gray-700">Your Status</span>
+                </div>
+                <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Stable</Badge>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          <Card className="overflow-hidden p-0">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Live Camera Preview</h2>
+            </div>
+            <LiveCameraFeed autoStart={false} label={`${session?.bedNo ?? "ICU-01"} — Bed View`} />
+          </Card>
+
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold text-gray-900">Live Waveforms</h2>
+            <ICUMonitorWaveform
+              type="ecg"
+              label="ECG — Heart Rate"
+              value={heartRate}
+              unit="bpm"
+              heartRate={heartRate}
+            />
+            <ICUMonitorWaveform
+              type="spo2"
+              label="SpO₂ — Oxygen Level"
+              value={spO2}
+              unit="%"
+              heartRate={heartRate}
+              color="#38bdf8"
+            />
+          </div>
+        </div>
+
         <VitalSignsCard
-          heartRate={75}
-          spO2={97}
+          heartRate={heartRate}
+          spO2={spO2}
           systolicBP={118}
           diastolicBP={78}
           temperature={37.1}
-          respiratoryRate={15}
+          respiratoryRate={liveVitals.respiratoryRate}
         />
 
-        {/* Main Sections */}
-        <div className="grid md:grid-cols-2 gap-8 mt-8">
-          {/* Vital Signs History */}
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-primary" />
-              Vital Signs History
-            </h2>
-            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-              <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">No vital data available yet</p>
-              <p className="text-sm text-gray-500 mt-2">Your vital signs will be displayed here as they are recorded</p>
-            </div>
-          </div>
-
-          {/* Recovery Trends */}
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Heart className="w-6 h-6 text-primary" />
-              Recovery Trends
-            </h2>
-            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-              <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">Recovery data will appear here</p>
-              <p className="text-sm text-gray-500 mt-2">Your recovery progress will be tracked and displayed</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Medication Schedule */}
-        <div className="mt-8">
-          <MedicationRemindersPanel reminders={[]} />
-        </div>
-
-        {/* Assigned Doctor */}
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <User className="w-6 h-6 text-primary" />
-            Your Healthcare Team
-          </h2>
-          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-            <User className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600">No assigned doctor yet</p>
-            <p className="text-sm text-gray-500 mt-2">Your assigned healthcare provider will be displayed here</p>
-          </div>
-        </div>
-      </main>
-    </div>
+        <Card className="p-8 text-center">
+          <TrendingUp className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-600">Recovery trends and full history</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Detailed analytics are managed by your care team
+          </p>
+        </Card>
+      </div>
+    </PatientLayout>
   );
 }

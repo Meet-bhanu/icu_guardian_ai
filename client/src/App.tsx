@@ -8,6 +8,9 @@ import Home from "./pages/Home";
 import RoleSelection from "./pages/RoleSelection";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import PatientDashboard from "./pages/PatientDashboard";
+import PatientMonitoringPage from "./pages/patient/PatientMonitoringPage";
+import PatientMedicationsPage from "./pages/patient/PatientMedicationsPage";
+import PatientWaveformsPage from "./pages/patient/PatientWaveformsPage";
 import AdminLogin from "./pages/AdminLogin";
 import PatientLogin from "./pages/PatientLogin";
 import Dashboard from "./pages/dashboard/Dashboard";
@@ -22,7 +25,9 @@ import DoctorsPage from "./pages/dashboard/DoctorsPage";
 import FamilyContactsPage from "./pages/dashboard/FamilyContactsPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
 import { useAuth } from "./_core/hooks/useAuth";
+import { getPatientSession } from "./lib/patientSession";
 import { Spinner } from "./components/ui/spinner";
+import { Redirect } from "wouter";
 
 interface ProtectedRouteProps {
   path: string;
@@ -52,11 +57,39 @@ function ProtectedRouteComponent({ Component, requiredRole }: { Component: React
   return <Component />;
 }
 
+function PatientProtectedRouteComponent({ Component }: { Component: React.ComponentType }) {
+  const { user, loading } = useAuth();
+  const demoSession = getPatientSession();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (user?.role === "patient" || demoSession) {
+    return <Component />;
+  }
+
+  return <Redirect to="/login/patient" />;
+}
+
 function ProtectedRoute({ path, component: Component, requiredRole }: ProtectedRouteProps) {
   return (
     <Route
       path={path}
       component={() => <ProtectedRouteComponent Component={Component} requiredRole={requiredRole} />}
+    />
+  );
+}
+
+function PatientProtectedRoute({ path, component: Component }: { path: string; component: React.ComponentType }) {
+  return (
+    <Route
+      path={path}
+      component={() => <PatientProtectedRouteComponent Component={Component} />}
     />
   );
 }
@@ -82,9 +115,14 @@ function Router() {
       <Route path={"/dashboard/family"} component={FamilyContactsPage} />
       <Route path={"/dashboard/settings"} component={SettingsPage} />
 
+      {/* Patient portal (limited access) */}
+      <PatientProtectedRoute path={"/patient/dashboard"} component={PatientDashboard} />
+      <PatientProtectedRoute path={"/patient/monitoring"} component={PatientMonitoringPage} />
+      <PatientProtectedRoute path={"/patient/waveforms"} component={PatientWaveformsPage} />
+      <PatientProtectedRoute path={"/patient/medications"} component={PatientMedicationsPage} />
+
       {/* Legacy role-based dashboards */}
       <ProtectedRoute path={"/doctor/dashboard"} component={DoctorDashboard} requiredRole="doctor" />
-      <ProtectedRoute path={"/patient/dashboard"} component={PatientDashboard} requiredRole="patient" />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
