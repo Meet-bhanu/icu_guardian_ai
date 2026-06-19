@@ -40,12 +40,12 @@ export default function Home() {
               </>
             ) : (
               <>
-                <a href={getLoginUrl()}>
+                <a href="/login/admin">
                   <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-50">
                     Log In
                   </Button>
                 </a>
-                <a href={getLoginUrl()}>
+                <a href="/login/admin">
                   <Button className="bg-primary hover:bg-primary/90 text-white">
                     Sign Up
                   </Button>
@@ -69,7 +69,7 @@ export default function Home() {
                 Reaching the Community with Quality Care
               </p>
               <div className="flex gap-4 pt-4">
-                <a href={getLoginUrl()}>
+                <a href="/login/admin">
                   <Button className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg">
                     Get Started
                   </Button>
@@ -326,7 +326,7 @@ export default function Home() {
             Join hospitals and healthcare providers using ICU Guardian AI to save lives and reduce response times.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <a href={getLoginUrl()}>
+            <a href="/login/admin">
               <Button className="bg-white text-primary hover:bg-gray-100 px-8 py-6 text-lg font-semibold">
                 Get Started Now
               </Button>

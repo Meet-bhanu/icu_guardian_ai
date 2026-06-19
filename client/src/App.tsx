@@ -8,16 +8,29 @@ import Home from "./pages/Home";
 import RoleSelection from "./pages/RoleSelection";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import PatientDashboard from "./pages/PatientDashboard";
+import AdminLogin from "./pages/AdminLogin";
+import PatientLogin from "./pages/PatientLogin";
+import Dashboard from "./pages/dashboard/Dashboard";
+import PatientsPage from "./pages/dashboard/PatientsPage";
+import LiveMonitoringPage from "./pages/dashboard/LiveMonitoringPage";
+import WaveformsPage from "./pages/dashboard/WaveformsPage";
+import ReportsPage from "./pages/dashboard/ReportsPage";
+import HealthTrendsPage from "./pages/dashboard/HealthTrendsPage";
+import MedicationsPage from "./pages/dashboard/MedicationsPage";
+import AlertsPage from "./pages/dashboard/AlertsPage";
+import DoctorsPage from "./pages/dashboard/DoctorsPage";
+import FamilyContactsPage from "./pages/dashboard/FamilyContactsPage";
+import SettingsPage from "./pages/dashboard/SettingsPage";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Spinner } from "./components/ui/spinner";
 
 interface ProtectedRouteProps {
   path: string;
-  component: React.ComponentType<any>;
+  component: React.ComponentType;
   requiredRole?: string;
 }
 
-function ProtectedRouteComponent({ Component, requiredRole }: { Component: React.ComponentType<any>; requiredRole?: string }) {
+function ProtectedRouteComponent({ Component, requiredRole }: { Component: React.ComponentType; requiredRole?: string }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -52,28 +65,36 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/login/admin"} component={AdminLogin} />
+      <Route path={"/login/patient"} component={PatientLogin} />
       <Route path={"/role-selection"} component={RoleSelection} />
+
+      {/* Main ICU Dashboard (all pages from design) */}
+      <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/dashboard/patients"} component={PatientsPage} />
+      <Route path={"/dashboard/monitoring"} component={LiveMonitoringPage} />
+      <Route path={"/dashboard/waveforms"} component={WaveformsPage} />
+      <Route path={"/dashboard/reports"} component={ReportsPage} />
+      <Route path={"/dashboard/trends"} component={HealthTrendsPage} />
+      <Route path={"/dashboard/medications"} component={MedicationsPage} />
+      <Route path={"/dashboard/alerts"} component={AlertsPage} />
+      <Route path={"/dashboard/doctors"} component={DoctorsPage} />
+      <Route path={"/dashboard/family"} component={FamilyContactsPage} />
+      <Route path={"/dashboard/settings"} component={SettingsPage} />
+
+      {/* Legacy role-based dashboards */}
       <ProtectedRoute path={"/doctor/dashboard"} component={DoctorDashboard} requiredRole="doctor" />
       <ProtectedRoute path={"/patient/dashboard"} component={PatientDashboard} requiredRole="patient" />
       <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />
