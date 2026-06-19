@@ -35,18 +35,19 @@
 
 ## Phase 5: Doctor Dashboard
 - [x] Create dashboard layout with sidebar navigation
+- [x] Display real-time vital signs per patient (heart rate, SpO2, BP, temperature) - VitalSignsCard component
+- [x] Create alert management panel showing active and resolved alerts - AlertPanel component
+- [x] Build medication reminder overview with compliance tracking - MedicationRemindersPanel component
 - [ ] Build patient list view with search and filtering
-- [ ] Display real-time vital signs per patient (heart rate, SpO2, BP, temperature)
-- [ ] Create alert management panel showing active and resolved alerts
-- [ ] Build medication reminder overview with compliance tracking
 - [ ] Implement patient detail modal/page with full vital history
 - [ ] Add ability to view assigned patients
 - [ ] Write vitest tests for doctor dashboard features
 
 ## Phase 6: Patient Dashboard
 - [x] Create dashboard layout with personal information
-- [ ] Build vital sign history chart (heart rate, SpO2, BP, temperature)
-- [ ] Display medication schedule with upcoming reminders
+- [x] Display vital sign history (heart rate, SpO2, BP, temperature) - VitalSignsCard component
+- [x] Display medication schedule with upcoming reminders - MedicationRemindersPanel component
+- [ ] Build vital sign history chart with trends
 - [ ] Build recovery trend visualization
 - [ ] Show assigned doctor information and contact
 - [ ] Display medication compliance status

@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import RoleSelection from "./pages/RoleSelection";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import PatientDashboard from "./pages/PatientDashboard";
 import { useAuth } from "./_core/hooks/useAuth";
@@ -16,7 +17,7 @@ interface ProtectedRouteProps {
   requiredRole?: string;
 }
 
-function ProtectedRoute({ path, component: Component, requiredRole }: ProtectedRouteProps) {
+function ProtectedRouteComponent({ Component, requiredRole }: { Component: React.ComponentType<any>; requiredRole?: string }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -28,20 +29,30 @@ function ProtectedRoute({ path, component: Component, requiredRole }: ProtectedR
   }
 
   if (!user) {
-    return <Route path={path} component={NotFound} />;
+    return <NotFound />;
   }
 
   if (requiredRole && user.role !== requiredRole) {
-    return <Route path={path} component={NotFound} />;
+    return <NotFound />;
   }
 
-  return <Route path={path} component={Component} />;
+  return <Component />;
+}
+
+function ProtectedRoute({ path, component: Component, requiredRole }: ProtectedRouteProps) {
+  return (
+    <Route
+      path={path}
+      component={() => <ProtectedRouteComponent Component={Component} requiredRole={requiredRole} />}
+    />
+  );
 }
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/role-selection"} component={RoleSelection} />
       <ProtectedRoute path={"/doctor/dashboard"} component={DoctorDashboard} requiredRole="doctor" />
       <ProtectedRoute path={"/patient/dashboard"} component={PatientDashboard} requiredRole="patient" />
       <Route path={"/404"} component={NotFound} />

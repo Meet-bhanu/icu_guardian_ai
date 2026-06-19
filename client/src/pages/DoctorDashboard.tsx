@@ -4,6 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Heart, AlertCircle, Pill, Users, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import VitalSignsCard from "@/components/VitalSignsCard";
+import AlertPanel from "@/components/AlertPanel";
+import MedicationRemindersPanel from "@/components/MedicationRemindersPanel";
 
 export default function DoctorDashboard() {
   const { user, logout } = useAuth();
@@ -83,25 +86,21 @@ export default function DoctorDashboard() {
             </div>
           </div>
 
+          {/* Vital Signs Demo */}
+          <VitalSignsCard
+            heartRate={72}
+            spO2={98}
+            systolicBP={120}
+            diastolicBP={80}
+            temperature={37.2}
+            respiratoryRate={16}
+          />
+
           {/* Alerts Section */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Recent Alerts</h2>
-            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-              <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">No active alerts</p>
-              <p className="text-sm text-gray-500 mt-2">Critical alerts will appear here in real-time</p>
-            </div>
-          </div>
+          <AlertPanel alerts={[]} />
 
           {/* Medication Reminders Section */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Medication Reminders</h2>
-            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-              <Pill className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">No pending reminders</p>
-              <p className="text-sm text-gray-500 mt-2">Medication reminders will appear here</p>
-            </div>
-          </div>
+          <MedicationRemindersPanel reminders={[]} />
         </div>
       </main>
     </div>
