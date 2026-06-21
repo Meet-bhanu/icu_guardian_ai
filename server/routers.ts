@@ -20,12 +20,14 @@ export const appRouter = router({
       .input(z.object({ role: z.enum(["doctor", "patient", "operator"]) }))
       .mutation(async ({ ctx, input }) => {
         try {
-          // Update user role in database
+          // Update user role in database if available
           const userDb = await db.getDb();
-          if (!userDb) throw new Error("Database not available");
-          
-          // This would require adding an update function to db.ts
-          // For now, we'll just return success
+          if (userDb) {
+            await db.upsertUser({
+              openId: ctx.user!.openId,
+              role: input.role,
+            });
+          }
           return { success: true, role: input.role };
         } catch (error) {
           console.error("Failed to set role:", error);

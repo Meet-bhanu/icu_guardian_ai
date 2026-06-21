@@ -1,8 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Heart, Activity, AlertCircle, ChevronRight, Shield } from "lucide-react";
+import { Heart, Activity, AlertCircle, ChevronRight, Shield, Pill, Building2 } from "lucide-react";
 import { Link } from "wouter";
-import MagicBento from "@/components/MagicBento/MagicBento";
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -141,31 +140,73 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-20 md:py-28 bg-[#060d0b] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,oklch(0.48_0.14_168/0.12),transparent_70%)]" />
-        <div className="container mx-auto px-4 relative">
-          <div className="mb-12 text-center max-w-2xl mx-auto">
-            <div className="h-1.5 w-20 hh-gradient-bg rounded-full mb-5 mx-auto" />
-            <h2 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+      <section className="py-20 md:py-28 bg-secondary">
+        <div className="container mx-auto px-4">
+          <div className="mb-14">
+            <div className="h-1.5 w-20 hh-gradient-bg rounded-full mb-5" />
+            <h2 className="text-4xl md:text-5xl font-extrabold text-foreground tracking-tight">
               Why Choose HealthHalo?
             </h2>
-            <p className="text-white/75 mt-4 font-medium text-lg">
-              Interactive platform capabilities built for hospitals, patients, and care teams.
-            </p>
           </div>
 
-          <MagicBento
-            textAutoHide={true}
-            enableStars={true}
-            enableSpotlight={true}
-            enableBorderGlow={true}
-            enableTilt={true}
-            enableMagnetism={true}
-            clickEffect={true}
-            spotlightRadius={300}
-            particleCount={12}
-            glowColor="0, 168, 132"
-          />
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="hh-gradient-bg rounded-2xl p-8 text-white space-y-6 shadow-lg shadow-primary/25">
+              <h3 className="text-2xl font-bold italic">Patients and Families</h3>
+              <ul className="space-y-3 font-medium">
+                <li className="flex gap-3">
+                  <span className="font-bold">✓</span>
+                  <span>Live Patient Surveillance</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold">✓</span>
+                  <span>Real-Time Vital Tracking</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold">✓</span>
+                  <span>AI Fall & Bed Exit Detection</span>
+                </li>
+              </ul>
+              <Heart className="w-12 h-12 opacity-50" />
+            </div>
+
+            <div className="hh-gradient-bg rounded-2xl p-8 text-white space-y-6 shadow-lg shadow-primary/25">
+              <h3 className="text-2xl font-bold italic">Referring Doctors</h3>
+              <ul className="space-y-3 font-medium">
+                <li className="flex gap-3">
+                  <span className="font-bold">✓</span>
+                  <span>Medication Compliance Monitoring</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold">✓</span>
+                  <span>Health Trend Analytics</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold">✓</span>
+                  <span>Hospital-Grade Security</span>
+                </li>
+              </ul>
+              <Pill className="w-12 h-12 opacity-50" />
+            </div>
+
+            <div className="hh-gradient-bg rounded-2xl p-8 text-white space-y-6 shadow-lg shadow-primary/25">
+              <h3 className="text-2xl font-bold italic">Local Communities</h3>
+              <ul className="space-y-3 font-medium">
+                <li className="flex gap-3">
+                  <span className="font-bold">✓</span>
+                  <span>Automated Emergency Escalation</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold">✓</span>
+                  <span>Family & Doctor Notifications</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold">✓</span>
+                  <span>Reduced Response Times</span>
+                </li>
+              </ul>
+              <Building2 className="w-12 h-12 opacity-50" />
+            </div>
+          </div>
         </div>
       </section>
 
