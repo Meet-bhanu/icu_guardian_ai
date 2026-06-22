@@ -37,6 +37,7 @@ export default function PatientWaveformsPage() {
             unit="bpm"
             heartRate={heartRate}
             color="#00ff41"
+            size="large"
           />
           <ICUMonitorWaveform
             type="spo2"
@@ -45,6 +46,7 @@ export default function PatientWaveformsPage() {
             unit="%"
             heartRate={heartRate}
             color="#38bdf8"
+            size="large"
           />
         </div>
       </div>

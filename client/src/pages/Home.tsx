@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Heart, Activity, AlertCircle, ChevronRight, Shield, Pill, Building2 } from "lucide-react";
 import { Link } from "wouter";
 import Footer from "@/components/Footer";
+import TrueFocus from "@/components/TrueFocus/TrueFocus";
+import ScrollReveal from "@/components/ScrollReveal/ScrollReveal";
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
@@ -28,7 +30,7 @@ export default function Home() {
             {isAuthenticated ? (
               <>
                 <span className="text-sm text-muted-foreground font-medium hidden sm:inline">Welcome, {user?.name}</span>
-                <Link href={user?.role === "doctor" ? "/doctor/dashboard" : user?.role === "patient" ? "/patient/dashboard" : "/dashboard"}>
+                <Link href={user?.role === "doctor" ? "/doctor/dashboard" : "/dashboard"}>
                   <Button>Dashboard</Button>
                 </Link>
               </>
@@ -58,6 +60,16 @@ export default function Home() {
               <h1 className="text-5xl md:text-6xl font-extrabold text-foreground leading-[1.1] tracking-tight">
                 Hospital <span className="text-primary">Monitoring</span>
               </h1>
+              <div className="py-2">
+                <TrueFocus
+                  sentence="True Focus"
+                  manualMode={false}
+                  blurAmount={4.5}
+                  borderColor="#00d898"
+                  animationDuration={2}
+                  pauseBetweenAnimations={1}
+                />
+              </div>
               <p className="text-xl text-muted-foreground font-medium leading-relaxed max-w-lg">
                 Reaching the community with quality care — real-time vitals, AI surveillance, and coordinated response.
               </p>
@@ -122,9 +134,15 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6 order-2 md:order-1">
               <div className="h-1.5 w-20 hh-gradient-bg rounded-full" />
-              <h2 className="text-4xl md:text-5xl font-extrabold text-foreground tracking-tight">
+              <ScrollReveal
+                baseOpacity={0.4}
+                enableBlur={true}
+                baseRotation={4}
+                blurStrength={10}
+                containerClassName="text-foreground"
+              >
                 Why is it important in real time
-              </h2>
+              </ScrollReveal>
               <p className="text-lg text-muted-foreground leading-relaxed font-medium">
                 HealthHalo is an intelligent healthcare platform designed to support doctors, nurses, and hospital operators with continuous patient monitoring and automated emergency response. By combining medical telemetry, computer vision, artificial intelligence, and predictive analytics, the platform helps improve patient safety and reduce response times during critical situations.
               </p>

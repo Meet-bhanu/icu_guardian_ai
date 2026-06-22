@@ -27,7 +27,7 @@ const footerSections: FooterSection[] = [
     links: [
       { label: "Patient Login", href: "/login/patient" },
       { label: "Staff Login", href: "/login/admin" },
-      { label: "Patient Dashboard", href: "/patient/dashboard" },
+      { label: "Patient Dashboard", href: "/dashboard" },
       { label: "Staff Dashboard", href: "/dashboard" },
       { label: "Role Selection", href: "/role-selection" },
     ],

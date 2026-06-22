@@ -32,6 +32,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { usePatientAuth } from "@/hooks/usePatientAuth";
+
+function getInitials(name?: string | null): string {
+  if (!name) return "AD";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 export interface NavItem {
   icon: LucideIcon;
@@ -73,27 +83,40 @@ interface AppLayoutProps {
 
 export default function AppLayout({
   children,
-  navItems = adminNavItems,
-  userName = "Admin",
-  userRole = "ICU Supervisor",
-  userInitials = "AD",
-  logoutPath = "/login/admin",
+  navItems,
+  userName,
+  userRole,
+  userInitials,
+  logoutPath,
   onLogout,
   searchPlaceholder = "Search patients, alerts...",
 }: AppLayoutProps) {
+  const { user: patientUser, session, isPatient, logout: patientLogout } = usePatientAuth();
+
+  const resolvedNavItems = navItems ?? adminNavItems;
+  const resolvedUserName = userName ?? (isPatient ? (patientUser?.name ?? "Patient") : "Admin");
+  const resolvedUserRole =
+    userRole ??
+    (isPatient
+      ? `${session?.bedNo ?? "ICU-01"} · ${session?.patientId ?? "P001"}`
+      : "ICU Supervisor");
+  const resolvedUserInitials = userInitials ?? (isPatient ? getInitials(patientUser?.name) : "AD");
+  const resolvedLogoutPath = logoutPath ?? (isPatient ? "/login/patient" : "/login/admin");
+  const resolvedOnLogout = onLogout ?? (isPatient ? patientLogout : undefined);
+
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
 
   const handleLogout = async () => {
     setShowLogout(false);
-    if (onLogout) {
-      await onLogout();
+    if (resolvedOnLogout) {
+      await resolvedOnLogout();
     }
-    setLocation(logoutPath);
+    setLocation(resolvedLogoutPath);
   };
 
-  const rootPath = navItems[0]?.path ?? "/dashboard";
+  const rootPath = resolvedNavItems[0]?.path ?? "/dashboard";
   const isActive = (path: string) =>
     path === rootPath ? location === path : location.startsWith(path);
 
@@ -128,7 +151,7 @@ export default function AppLayout({
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-          {navItems.map((item) => (
+          {resolvedNavItems.map((item) => (
             <Link key={item.path} href={item.path}>
               <button
                 onClick={() => setSidebarOpen(false)}
@@ -182,12 +205,12 @@ export default function AppLayout({
             <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
-                  {userInitials}
+                  {resolvedUserInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden sm:block">
-                <p className="text-sm font-semibold text-foreground leading-none">{userName}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 font-medium">{userRole}</p>
+                <p className="text-sm font-semibold text-foreground leading-none">{resolvedUserName}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 font-medium">{resolvedUserRole}</p>
               </div>
             </div>
           </div>

@@ -11,6 +11,7 @@ interface ICUMonitorWaveformProps {
   color?: string;
   heartRate?: number;
   className?: string;
+  size?: "default" | "large";
 }
 
 function ecgSample(phase: number): number {
@@ -36,8 +37,13 @@ function sampleAt(type: WaveformType, timeSec: number, heartRate: number): numbe
   const period = 60 / heartRate;
   const phase = (timeSec % period) / period;
   const raw = type === "ecg" ? ecgSample(phase) : spo2Sample(phase);
-  const noise = (Math.random() - 0.5) * 0.02;
+  const noise = (Math.random() - 0.5) * 0.035;
   return raw + noise;
+}
+
+function getBeatPhase(timeSec: number, heartRate: number): number {
+  const period = 60 / heartRate;
+  return (timeSec % period) / period;
 }
 
 export default function ICUMonitorWaveform({
@@ -48,9 +54,17 @@ export default function ICUMonitorWaveform({
   color,
   heartRate = 75,
   className,
+  size = "default",
 }: ICUMonitorWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const valueRef = useRef<HTMLSpanElement>(null);
+  const heartRateRef = useRef(heartRate);
   const waveColor = color ?? (type === "ecg" ? "#00ff41" : "#38bdf8");
+  const canvasHeight = size === "large" ? "h-[160px]" : "h-[100px]";
+
+  useEffect(() => {
+    heartRateRef.current = heartRate;
+  }, [heartRate]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -61,8 +75,8 @@ export default function ICUMonitorWaveform({
 
     let animationId = 0;
     let timeSec = 0;
-    let sweepY = 0;
     let flickerPhase = 0;
+    let scanLineY = 0;
     const buffer: number[] = [];
 
     const resize = () => {
@@ -81,8 +95,8 @@ export default function ICUMonitorWaveform({
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
-    const drawGrid = (w: number, h: number) => {
-      ctx.strokeStyle = "rgba(0, 255, 65, 0.08)";
+    const drawGrid = (w: number, h: number, gridColor: string) => {
+      ctx.strokeStyle = gridColor;
       ctx.lineWidth = 1;
       const stepX = 24;
       const stepY = 16;
@@ -100,6 +114,32 @@ export default function ICUMonitorWaveform({
       }
     };
 
+    const drawWaveform = (
+      w: number,
+      h: number,
+      midY: number,
+      amplitude: number,
+      alpha: number,
+      blur: number,
+      lineWidth: number
+    ) => {
+      ctx.beginPath();
+      for (let i = 0; i < buffer.length; i++) {
+        const x = i;
+        const y = midY - buffer[i] * amplitude;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = waveColor;
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = lineWidth;
+      ctx.shadowColor = waveColor;
+      ctx.shadowBlur = blur;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    };
+
     const animate = () => {
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
@@ -112,49 +152,77 @@ export default function ICUMonitorWaveform({
         resize();
       }
 
+      const hr = heartRateRef.current;
       timeSec += 0.016;
-      flickerPhase += 0.12;
-      sweepY = (sweepY + 1.8) % (h + 20);
+      flickerPhase += 0.18;
+      scanLineY = (scanLineY + 0.6) % h;
 
-      const newSample = sampleAt(type, timeSec, heartRate);
+      const beatPhase = getBeatPhase(timeSec, hr);
+      const isBeatFlash = type === "ecg" && beatPhase > 0.16 && beatPhase < 0.22;
+      const isSpo2Pulse = type === "spo2" && beatPhase > 0.05 && beatPhase < 0.35;
+
+      const newSample = sampleAt(type, timeSec, hr);
       buffer.shift();
       buffer.push(newSample);
 
-      ctx.fillStyle = "#050a08";
+      // Phosphor persistence — partial erase creates trailing glow
+      ctx.fillStyle = "rgba(5, 10, 8, 0.42)";
       ctx.fillRect(0, 0, w, h);
 
-      drawGrid(w, h);
+      const gridColor =
+        type === "ecg" ? "rgba(0, 255, 65, 0.07)" : "rgba(56, 189, 248, 0.07)";
+      drawGrid(w, h, gridColor);
 
       const midY = h * 0.55;
       const amplitude = h * (type === "ecg" ? 0.38 : 0.32);
-      const flicker = 0.88 + Math.sin(flickerPhase) * 0.12;
 
-      ctx.beginPath();
-      for (let i = 0; i < buffer.length; i++) {
-        const x = i;
-        const y = midY - buffer[i] * amplitude;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+      // Primary flicker — hospital monitor intensity variation
+      const baseFlicker = 0.72 + Math.sin(flickerPhase) * 0.18 + Math.sin(flickerPhase * 2.7) * 0.08;
+      const beatBoost = isBeatFlash ? 0.25 : isSpo2Pulse ? 0.12 : 0;
+      const flicker = Math.min(1, baseFlicker + beatBoost + (Math.random() - 0.5) * 0.06);
+
+      // Phosphor ghost trail
+      drawWaveform(w, h, midY, amplitude, flicker * 0.22, 14, type === "ecg" ? 3 : 2.5);
+      // Main trace
+      drawWaveform(w, h, midY, amplitude, flicker, isBeatFlash ? 12 : 6, type === "ecg" ? 2 : 1.8);
+
+      // Beat flash overlay on R-wave
+      if (isBeatFlash) {
+        ctx.fillStyle = `rgba(0, 255, 65, ${0.06 + Math.random() * 0.04})`;
+        ctx.fillRect(0, 0, w, h);
       }
-      ctx.strokeStyle = waveColor;
-      ctx.globalAlpha = flicker;
-      ctx.lineWidth = type === "ecg" ? 2 : 1.8;
-      ctx.shadowColor = waveColor;
-      ctx.shadowBlur = 6;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
 
-      const eraseX = w - 18;
+      // Horizontal scan line (CRT-style)
+      ctx.fillStyle = `rgba(0, 255, 65, ${0.03 + Math.sin(flickerPhase) * 0.02})`;
+      ctx.fillRect(0, scanLineY, w, 2);
+
+      // Trailing erase bar at right edge
+      const eraseX = w - 20;
       ctx.fillStyle = "#050a08";
-      ctx.fillRect(eraseX, 0, 18, h);
+      ctx.fillRect(eraseX, 0, 20, h);
 
-      const gradient = ctx.createLinearGradient(0, sweepY - 8, 0, sweepY + 8);
-      gradient.addColorStop(0, "rgba(0, 255, 65, 0)");
-      gradient.addColorStop(0.5, "rgba(0, 255, 65, 0.12)");
-      gradient.addColorStop(1, "rgba(0, 255, 65, 0)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, sweepY - 8, w, 16);
+      // Sweep highlight at trace head
+      const headGradient = ctx.createLinearGradient(eraseX - 30, 0, eraseX, 0);
+      headGradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+      headGradient.addColorStop(0.6, `${waveColor}18`);
+      headGradient.addColorStop(1, `${waveColor}44`);
+      ctx.fillStyle = headGradient;
+      ctx.fillRect(eraseX - 30, 0, 30, h);
+
+      // Flicker numeric readout without React re-renders
+      if (valueRef.current) {
+        const numFlicker =
+          0.78 +
+          Math.sin(flickerPhase * 1.4) * 0.14 +
+          (isBeatFlash || isSpo2Pulse ? 0.12 : 0) +
+          (Math.random() - 0.5) * 0.08;
+        valueRef.current.style.opacity = String(Math.min(1, numFlicker));
+        if (isBeatFlash && type === "ecg") {
+          valueRef.current.style.textShadow = `0 0 12px ${waveColor}, 0 0 24px ${waveColor}88`;
+        } else {
+          valueRef.current.style.textShadow = `0 0 6px ${waveColor}66`;
+        }
+      }
 
       animationId = requestAnimationFrame(animate);
     };
@@ -165,7 +233,7 @@ export default function ICUMonitorWaveform({
       cancelAnimationFrame(animationId);
       observer.disconnect();
     };
-  }, [type, waveColor, heartRate]);
+  }, [type, waveColor]);
 
   return (
     <div
@@ -175,21 +243,33 @@ export default function ICUMonitorWaveform({
       )}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-emerald-900/40 bg-black/40">
-        <span className="text-xs font-mono uppercase tracking-wider text-emerald-400/90">
+        <span className="text-xs font-mono uppercase tracking-wider text-emerald-400/90 animate-pulse">
           {label}
         </span>
         <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold font-mono tabular-nums" style={{ color: waveColor }}>
+          <span
+            ref={valueRef}
+            className="text-2xl font-bold font-mono tabular-nums transition-none"
+            style={{ color: waveColor, textShadow: `0 0 6px ${waveColor}66` }}
+          >
             {value}
           </span>
           <span className="text-xs font-mono text-emerald-500/70">{unit}</span>
         </div>
       </div>
-      <canvas ref={canvasRef} className="w-full h-[100px] block" />
+      <canvas ref={canvasRef} className={cn("w-full block", canvasHeight)} />
       <div className="absolute top-12 left-2 flex items-center gap-1.5">
         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-        <span className="text-[10px] font-mono text-red-400/90 uppercase">Live</span>
+        <span className="text-[10px] font-mono text-red-400/90 uppercase animate-pulse">Live</span>
       </div>
+      {/* Subtle CRT vignette */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.35) 100%)",
+        }}
+      />
     </div>
   );
 }

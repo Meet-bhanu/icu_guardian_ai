@@ -133,7 +133,7 @@ export default function PatientDashboard() {
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">Live Camera Preview</h2>
             </div>
-            <LiveCameraFeed autoStart={false} label={`${session?.bedNo ?? "ICU-01"} — Bed View`} />
+            <LiveCameraFeed autoStart label={`${session?.bedNo ?? "ICU-01"} — Bed View`} />
           </Card>
 
           <div className="space-y-3">
@@ -144,6 +144,7 @@ export default function PatientDashboard() {
               value={heartRate}
               unit="bpm"
               heartRate={heartRate}
+              size="large"
             />
             <ICUMonitorWaveform
               type="spo2"
@@ -152,6 +153,7 @@ export default function PatientDashboard() {
               unit="%"
               heartRate={heartRate}
               color="#38bdf8"
+              size="large"
             />
           </div>
         </div>
