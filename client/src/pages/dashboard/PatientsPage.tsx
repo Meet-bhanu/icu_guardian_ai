@@ -1,6 +1,9 @@
 import AppLayout from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { useLocation } from "wouter";
+import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -28,6 +31,19 @@ const statusStyles = {
 };
 
 export default function PatientsPage() {
+  const { isPatient } = usePatientAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isPatient) {
+      setLocation("/dashboard");
+    }
+  }, [isPatient, setLocation]);
+
+  if (isPatient) {
+    return null;
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">

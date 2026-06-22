@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-type WaveformType = "ecg" | "spo2";
+type WaveformType = "ecg" | "spo2" | "resp" | "pulse";
 
 interface ICUMonitorWaveformProps {
   type: WaveformType;
@@ -33,10 +33,27 @@ function spo2Sample(phase: number): number {
   return base;
 }
 
+function respSample(phase: number): number {
+  return Math.sin(phase * Math.PI * 2) * 0.35;
+}
+
+function pulseSample(phase: number): number {
+  return spo2Sample(phase);
+}
+
 function sampleAt(type: WaveformType, timeSec: number, heartRate: number): number {
-  const period = 60 / heartRate;
+  const period = type === "resp" ? 4.5 : 60 / heartRate;
   const phase = (timeSec % period) / period;
-  const raw = type === "ecg" ? ecgSample(phase) : spo2Sample(phase);
+  let raw = 0;
+  if (type === "ecg") {
+    raw = ecgSample(phase);
+  } else if (type === "spo2") {
+    raw = spo2Sample(phase);
+  } else if (type === "resp") {
+    raw = respSample(phase);
+  } else if (type === "pulse") {
+    raw = pulseSample(phase);
+  }
   const noise = (Math.random() - 0.5) * 0.035;
   return raw + noise;
 }
@@ -59,7 +76,11 @@ export default function ICUMonitorWaveform({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const valueRef = useRef<HTMLSpanElement>(null);
   const heartRateRef = useRef(heartRate);
-  const waveColor = color ?? (type === "ecg" ? "#00ff41" : "#38bdf8");
+  const waveColor = color ?? (
+    type === "ecg" ? "#00ff41" :
+    type === "spo2" ? "#38bdf8" :
+    type === "resp" ? "#f97316" : "#22c55e"
+  );
   const canvasHeight = size === "large" ? "h-[160px]" : "h-[100px]";
 
   useEffect(() => {
@@ -159,7 +180,7 @@ export default function ICUMonitorWaveform({
 
       const beatPhase = getBeatPhase(timeSec, hr);
       const isBeatFlash = type === "ecg" && beatPhase > 0.16 && beatPhase < 0.22;
-      const isSpo2Pulse = type === "spo2" && beatPhase > 0.05 && beatPhase < 0.35;
+      const isSpo2Pulse = (type === "spo2" || type === "pulse") && beatPhase > 0.05 && beatPhase < 0.35;
 
       const newSample = sampleAt(type, timeSec, hr);
       buffer.shift();
@@ -169,12 +190,24 @@ export default function ICUMonitorWaveform({
       ctx.fillStyle = "rgba(5, 10, 8, 0.42)";
       ctx.fillRect(0, 0, w, h);
 
-      const gridColor =
-        type === "ecg" ? "rgba(0, 255, 65, 0.07)" : "rgba(56, 189, 248, 0.07)";
+      let gridColor = "rgba(56, 189, 248, 0.07)";
+      if (type === "ecg") {
+        gridColor = "rgba(0, 255, 65, 0.07)";
+      } else if (type === "resp") {
+        gridColor = "rgba(249, 115, 22, 0.07)";
+      } else if (type === "pulse") {
+        gridColor = "rgba(34, 197, 94, 0.07)";
+      }
       drawGrid(w, h, gridColor);
 
       const midY = h * 0.55;
-      const amplitude = h * (type === "ecg" ? 0.38 : 0.32);
+      let ampFactor = 0.32;
+      if (type === "ecg") {
+        ampFactor = 0.38;
+      } else if (type === "resp") {
+        ampFactor = 0.26;
+      }
+      const amplitude = h * ampFactor;
 
       // Primary flicker — hospital monitor intensity variation
       const baseFlicker = 0.72 + Math.sin(flickerPhase) * 0.18 + Math.sin(flickerPhase * 2.7) * 0.08;
@@ -182,9 +215,10 @@ export default function ICUMonitorWaveform({
       const flicker = Math.min(1, baseFlicker + beatBoost + (Math.random() - 0.5) * 0.06);
 
       // Phosphor ghost trail
-      drawWaveform(w, h, midY, amplitude, flicker * 0.22, 14, type === "ecg" ? 3 : 2.5);
+      const isEcg = type === "ecg";
+      drawWaveform(w, h, midY, amplitude, flicker * 0.22, 14, isEcg ? 3 : 2.5);
       // Main trace
-      drawWaveform(w, h, midY, amplitude, flicker, isBeatFlash ? 12 : 6, type === "ecg" ? 2 : 1.8);
+      drawWaveform(w, h, midY, amplitude, flicker, isBeatFlash ? 12 : 6, isEcg ? 2 : 1.8);
 
       // Beat flash overlay on R-wave
       if (isBeatFlash) {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import "./TrueFocus.css";
 
 interface TrueFocusProps {

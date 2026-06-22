@@ -40,7 +40,7 @@ export default function LoginLayout({
         role: "patient",
         bedNo: "ICU-01",
       });
-      setLocation("/patient/dashboard");
+      setLocation("/dashboard");
       return;
     }
     setLocation("/dashboard");
@@ -58,7 +58,7 @@ export default function LoginLayout({
         role: "patient",
         bedNo: "ICU-01",
       });
-      setLocation("/patient/dashboard");
+      setLocation("/dashboard");
     } else {
       setLocation("/dashboard");
     }

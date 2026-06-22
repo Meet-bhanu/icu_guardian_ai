@@ -21,6 +21,7 @@ import {
   aiMonitoringStatus,
 } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
+import { usePatientAuth } from "@/hooks/usePatientAuth";
 
 const severityStyles = {
   critical: "bg-red-100 text-red-700",
@@ -29,6 +30,10 @@ const severityStyles = {
 };
 
 export default function Dashboard() {
+  const { isPatient, user: patientUser, session } = usePatientAuth();
+  const displayName = isPatient && patientUser ? patientUser.name : "John Smith";
+  const displayId = isPatient && session ? session.patientId : "P001";
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -38,41 +43,45 @@ export default function Dashboard() {
         </div>
 
         {/* Summary Tiles */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-500 font-medium">Total Patients</span>
-              <Users className="w-5 h-5 text-primary" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{dashboardStats.totalPatients}</p>
-          </Card>
-          <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-500 font-medium">Critical Patients</span>
-              <AlertTriangle className="w-5 h-5 text-red-500" />
-            </div>
-            <p className="text-3xl font-bold text-red-600">{dashboardStats.criticalPatients}</p>
-          </Card>
-          <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-500 font-medium">Today's Admissions</span>
-              <UserPlus className="w-5 h-5 text-primary" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{dashboardStats.todayAdmissions}</p>
-          </Card>
-          <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-500 font-medium">Discharges Today</span>
-              <UserMinus className="w-5 h-5 text-gray-400" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{dashboardStats.dischargesToday}</p>
-          </Card>
-        </div>
+        {!isPatient && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-gray-500 font-medium">Total Patients</span>
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{dashboardStats.totalPatients}</p>
+            </Card>
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-gray-500 font-medium">Critical Patients</span>
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+              <p className="text-3xl font-bold text-red-600">{dashboardStats.criticalPatients}</p>
+            </Card>
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-gray-500 font-medium">Today's Admissions</span>
+                <UserPlus className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{dashboardStats.todayAdmissions}</p>
+            </Card>
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-gray-500 font-medium">Discharges Today</span>
+                <UserMinus className="w-5 h-5 text-gray-400" />
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{dashboardStats.dischargesToday}</p>
+            </Card>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Live Overview */}
           <Card className="p-5 lg:col-span-2">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Live Overview — John Smith (P001)</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Live Overview — {displayName} ({displayId})
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-red-50 border border-red-100">
                 <div className="flex items-center gap-2 mb-2">

@@ -93,7 +93,9 @@ export default function AppLayout({
 }: AppLayoutProps) {
   const { user: patientUser, session, isPatient, logout: patientLogout } = usePatientAuth();
 
-  const resolvedNavItems = navItems ?? adminNavItems;
+  const resolvedNavItems = (navItems ?? adminNavItems).filter(
+    (item) => !isPatient || item.path !== "/dashboard/patients"
+  );
   const resolvedUserName = userName ?? (isPatient ? (patientUser?.name ?? "Patient") : "Admin");
   const resolvedUserRole =
     userRole ??
@@ -103,6 +105,9 @@ export default function AppLayout({
   const resolvedUserInitials = userInitials ?? (isPatient ? getInitials(patientUser?.name) : "AD");
   const resolvedLogoutPath = logoutPath ?? (isPatient ? "/login/patient" : "/login/admin");
   const resolvedOnLogout = onLogout ?? (isPatient ? patientLogout : undefined);
+  const resolvedSearchPlaceholder = searchPlaceholder !== "Search patients, alerts..."
+    ? searchPlaceholder
+    : (isPatient ? "Search your records..." : "Search patients, alerts...");
 
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -192,7 +197,7 @@ export default function AppLayout({
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder={searchPlaceholder}
+              placeholder={resolvedSearchPlaceholder}
               className="pl-9 bg-white border-border"
             />
           </div>

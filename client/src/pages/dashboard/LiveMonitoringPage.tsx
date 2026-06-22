@@ -1,17 +1,18 @@
 import AppLayout from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Heart,
   Droplets,
   Gauge,
   Wind,
-  Eye,
   User,
   BedDouble,
   Activity,
 } from "lucide-react";
 import { liveVitals } from "@/lib/mockData";
+import LiveCameraFeed from "@/components/LiveCameraFeed";
+import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { useEffect, useState } from "react";
 
 const aiDetections = [
   { label: "Motion Detection", active: true, icon: Activity },
@@ -20,46 +21,42 @@ const aiDetections = [
 ];
 
 export default function LiveMonitoringPage() {
+  const { isPatient, user: patientUser, session } = usePatientAuth();
+  const displayName = isPatient && patientUser ? patientUser.name : "John Smith";
+  const displayBed = isPatient && session ? session.bedNo : "ICU-01";
+
+  const [heartRate, setHeartRate] = useState(liveVitals.heartRate);
+  const [spO2, setSpO2] = useState(liveVitals.spO2);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setHeartRate((hr) => Math.round(Math.min(120, Math.max(60, hr + (Math.random() - 0.5) * 2))));
+      setSpO2((o2) => Math.round(Math.min(100, Math.max(90, o2 + (Math.random() - 0.5) * 0.4))));
+    }, 2000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <AppLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Live Monitoring</h1>
-          <p className="text-gray-500 text-sm mt-1">Real-time patient surveillance — John Smith (ICU-01)</p>
+          <p className="text-gray-500 text-sm mt-1">
+            Real-time patient surveillance — {displayName} ({displayBed})
+          </p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Video Feed */}
           <div className="lg:col-span-2 space-y-4">
-            <Card className="overflow-hidden">
-              <div className="relative aspect-video bg-gray-900 flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" />
-                <div className="relative z-10 text-center">
-                  <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center">
-                    <Eye className="w-10 h-10 text-white/60" />
-                  </div>
-                  <p className="text-white/80 text-sm">Live Camera Feed</p>
-                  <p className="text-white/50 text-xs mt-1">ICU-01 — Bed Monitoring</p>
-                  <Badge className="mt-3 bg-red-500 hover:bg-red-500 text-white gap-1">
-                    <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    LIVE
-                  </Badge>
-                </div>
-                <div className="absolute top-4 left-4 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                  14:32:08
-                </div>
-                <div className="absolute top-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                  Camera 01
-                </div>
-              </div>
-            </Card>
+            <LiveCameraFeed label={`${displayBed} — Bed Monitoring`} autoStart />
 
             {/* AI Detection Status */}
             <div className="flex flex-wrap gap-3">
               {aiDetections.map((det) => (
                 <div
-                  key={det.label}
-                  className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200 shadow-sm"
+                   key={det.label}
+                   className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200 shadow-sm"
                 >
                   <det.icon className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium text-gray-700">{det.label}</span>
@@ -78,7 +75,7 @@ export default function LiveMonitoringPage() {
                   <Heart className="w-4 h-4 text-red-500" />
                   <span className="text-sm font-medium text-red-600">Heart Rate</span>
                 </div>
-                <p className="text-3xl font-bold text-red-700">{liveVitals.heartRate}</p>
+                <p className="text-3xl font-bold text-red-700">{heartRate}</p>
                 <p className="text-xs text-red-500 mt-1">bpm</p>
               </div>
               <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
@@ -86,7 +83,7 @@ export default function LiveMonitoringPage() {
                   <Droplets className="w-4 h-4 text-blue-500" />
                   <span className="text-sm font-medium text-blue-600">SpO₂</span>
                 </div>
-                <p className="text-3xl font-bold text-blue-700">{liveVitals.spO2}%</p>
+                <p className="text-3xl font-bold text-blue-700">{spO2}%</p>
                 <p className="text-xs text-blue-500 mt-1">oxygen level</p>
               </div>
               <div className="p-4 rounded-xl bg-green-50 border border-green-100">

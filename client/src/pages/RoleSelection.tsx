@@ -25,7 +25,7 @@ export default function RoleSelection() {
         if (role === "doctor") {
           setLocation("/doctor/dashboard");
         } else {
-          setLocation("/patient/dashboard");
+          setLocation("/dashboard");
         }
       }, 1000);
     } catch (error) {
