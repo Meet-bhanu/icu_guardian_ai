@@ -22,6 +22,7 @@ import {
 } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { Redirect } from "wouter";
 
 const severityStyles = {
   critical: "bg-red-100 text-red-700",
@@ -31,6 +32,11 @@ const severityStyles = {
 
 export default function Dashboard() {
   const { isPatient, user: patientUser, session } = usePatientAuth();
+
+  if (!isPatient) {
+    return <Redirect to="/dashboard/patients" />;
+  }
+
   const displayName = isPatient && patientUser ? patientUser.name : "John Smith";
   const displayId = isPatient && session ? session.patientId : "P001";
 

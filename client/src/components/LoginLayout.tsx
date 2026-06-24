@@ -106,7 +106,7 @@ export default function LoginLayout({
       setLocation("/dashboard");
       return;
     }
-    setLocation("/dashboard");
+    setLocation("/dashboard/patients");
   };
 
   const handleOAuthLogin = () => {
@@ -123,7 +123,7 @@ export default function LoginLayout({
       });
       setLocation("/dashboard");
     } else {
-      setLocation("/dashboard");
+      setLocation("/dashboard/patients");
     }
   };
 

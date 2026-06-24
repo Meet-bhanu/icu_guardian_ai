@@ -8,6 +8,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { getPatientById } from "@/lib/patientData";
+import { usePatientAuth } from "@/hooks/usePatientAuth";
 
 const sections = [
   {
@@ -52,10 +53,11 @@ interface PatientOverviewContentProps {
 }
 
 export default function PatientOverviewContent({ patientId }: PatientOverviewContentProps) {
+  const { isPatient } = usePatientAuth();
   const patient = getPatientById(patientId);
   if (!patient) return null;
 
-  const basePath = `/dashboard/patients/${patientId}`;
+  const basePath = isPatient ? "/patient" : `/dashboard/patients/${patientId}`;
 
   return (
     <div className="space-y-6">

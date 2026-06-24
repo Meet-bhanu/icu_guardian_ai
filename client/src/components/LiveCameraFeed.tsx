@@ -192,13 +192,33 @@ export default function LiveCameraFeed({
             autoPlay
             playsInline
             muted
-            className="absolute inset-0 w-full h-full object-cover"
+            className={cn(
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
+              !bodyDetected ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 text-center px-6">
             <CameraOff className="w-12 h-12 text-white/40 mb-3" />
             <p className="text-white/70 text-sm">
               {error ?? "Camera is off"}
+            </p>
+          </div>
+        )}
+
+        {active && !bodyDetected && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-red-950 via-gray-900 to-black text-center px-6 z-20 animate-pulse border-4 border-red-600/80">
+            <div className="w-16 h-16 rounded-full bg-red-500/25 border border-red-500 flex items-center justify-center mb-4 shadow-lg shadow-red-500/40">
+              <UserX className="w-8 h-8 text-red-500 animate-bounce" />
+            </div>
+            <h3 className="text-red-500 text-lg font-bold uppercase tracking-wider mb-1.5">
+              Patient Body Missing
+            </h3>
+            <p className="text-gray-300 text-xs max-w-sm leading-relaxed">
+              The camera feed is hidden because no person is detected in the monitoring view.
+            </p>
+            <p className="text-[10px] text-red-400 font-semibold mt-3.5 bg-red-950/60 border border-red-800/40 px-3 py-1 rounded-full">
+              Nurse, Doctor & Family contacts alerted.
             </p>
           </div>
         )}

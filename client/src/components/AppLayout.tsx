@@ -50,11 +50,9 @@ export interface NavItem {
 }
 
 export const adminNavItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Patients", path: "/dashboard/patients" },
   { icon: Monitor, label: "Live Monitoring", path: "/dashboard/monitoring" },
   { icon: Activity, label: "Waveforms", path: "/dashboard/waveforms" },
-  { icon: Pill, label: "Medications", path: "/dashboard/medications" },
   { icon: Bell, label: "Alerts", path: "/dashboard/alerts" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];

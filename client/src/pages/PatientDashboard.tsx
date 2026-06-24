@@ -1,4 +1,5 @@
 import PatientLayout from "@/components/PatientLayout";
+import { Link } from "wouter";
 
 import LiveCameraFeed from "@/components/LiveCameraFeed";
 import VitalSignsCard from "@/components/VitalSignsCard";
@@ -61,7 +62,11 @@ export default function PatientDashboard() {
           <div className="grid sm:grid-cols-3 gap-4">
             <div>
               <p className="text-sm text-gray-500">Name</p>
-              <p className="text-base font-semibold text-gray-900">{patientName}</p>
+              <Link href="/patient/overview">
+                <span className="text-base font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1 w-fit">
+                  {patientName}
+                </span>
+              </Link>
             </div>
             <div>
               <p className="text-sm text-gray-500">Patient ID</p>
