@@ -1,4 +1,4 @@
-export const CRITICAL_ALARM_MIN_DURATION_MS = 30_000;
+export const CRITICAL_ALARM_MIN_DURATION_MS = 0;
 
 let audioContext: AudioContext | null = null;
 let activeAlarmStop: (() => void) | null = null;
@@ -24,7 +24,7 @@ export function getCriticalAlarmElapsedMs(): number {
 }
 
 export function canAcknowledgeCriticalAlarm(): boolean {
-  return getCriticalAlarmElapsedMs() >= CRITICAL_ALARM_MIN_DURATION_MS;
+  return true; // Acknowledge instantly
 }
 
 export function stopCriticalPatientAlarm(): void {
@@ -52,48 +52,66 @@ export function playCriticalPatientAlarm(
   const speechTimeouts: ReturnType<typeof setTimeout>[] = [];
 
   const masterGain = ctx.createGain();
-  masterGain.gain.value = 0.92;
+  masterGain.gain.value = 0.55; // 40% less loud (60% of 0.92 is ~0.55)
   masterGain.connect(ctx.destination);
 
-  const cycleCount = 60;
-  const cycleDuration = 0.5;
+  // Play a medical-grade tri-tone chime: C5 (523.25Hz), E5 (659.25Hz), G5 (783.99Hz)
+  // Repeating every 1.8 seconds, up to 15 times (~27 seconds duration)
+  const beepDur = 0.12;
+  const gap = 0.15;
+  const repeatCount = 15;
 
-  for (let i = 0; i < cycleCount; i++) {
-    const t = startedAt + i * cycleDuration;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+  for (let i = 0; i < repeatCount; i++) {
+    const groupStart = startedAt + i * 1.8;
 
-    osc.type = "square";
-    osc.frequency.setValueAtTime(i % 2 === 0 ? 880 : 1320, t);
+    // Tone 1: C5
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(523.25, groupStart);
+    gain1.gain.setValueAtTime(0.0001, groupStart);
+    gain1.gain.exponentialRampToValueAtTime(0.35, groupStart + 0.02);
+    gain1.gain.setValueAtTime(0.35, groupStart + beepDur - 0.02);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, groupStart + beepDur);
+    osc1.connect(gain1);
+    gain1.connect(masterGain);
+    osc1.start(groupStart);
+    osc1.stop(groupStart + beepDur);
+    oscillators.push(osc1);
+    gains.push(gain1);
 
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.55, t + 0.04);
-    gain.gain.setValueAtTime(0.55, t + cycleDuration - 0.06);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + cycleDuration);
+    // Tone 2: E5
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(659.25, groupStart + gap);
+    gain2.gain.setValueAtTime(0.0001, groupStart + gap);
+    gain2.gain.exponentialRampToValueAtTime(0.35, groupStart + gap + 0.02);
+    gain2.gain.setValueAtTime(0.35, groupStart + gap + beepDur - 0.02);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, groupStart + gap + beepDur);
+    osc2.connect(gain2);
+    gain2.connect(masterGain);
+    osc2.start(groupStart + gap);
+    osc2.stop(groupStart + gap + beepDur);
+    oscillators.push(osc2);
+    gains.push(gain2);
 
-    osc.connect(gain);
-    gain.connect(masterGain);
-    osc.start(t);
-    osc.stop(t + cycleDuration);
-
-    oscillators.push(osc);
-    gains.push(gain);
+    // Tone 3: G5
+    const osc3 = ctx.createOscillator();
+    const gain3 = ctx.createGain();
+    osc3.type = "sine";
+    osc3.frequency.setValueAtTime(783.99, groupStart + gap * 2);
+    gain3.gain.setValueAtTime(0.0001, groupStart + gap * 2);
+    gain3.gain.exponentialRampToValueAtTime(0.35, groupStart + gap * 2 + 0.02);
+    gain3.gain.setValueAtTime(0.35, groupStart + gap * 2 + beepDur - 0.02);
+    gain3.gain.exponentialRampToValueAtTime(0.0001, groupStart + gap * 2 + beepDur);
+    osc3.connect(gain3);
+    gain3.connect(masterGain);
+    osc3.start(groupStart + gap * 2);
+    osc3.stop(groupStart + gap * 2 + beepDur);
+    oscillators.push(osc3);
+    gains.push(gain3);
   }
-
-  const klaxonOsc = ctx.createOscillator();
-  const klaxonGain = ctx.createGain();
-  klaxonOsc.type = "sawtooth";
-  klaxonOsc.frequency.setValueAtTime(440, startedAt);
-  klaxonOsc.frequency.linearRampToValueAtTime(660, startedAt + 15);
-  klaxonOsc.frequency.linearRampToValueAtTime(440, startedAt + 30);
-  klaxonGain.gain.setValueAtTime(0.0001, startedAt);
-  klaxonGain.gain.exponentialRampToValueAtTime(0.35, startedAt + 0.1);
-  klaxonGain.gain.setValueAtTime(0.35, startedAt + 29.5);
-  klaxonGain.gain.exponentialRampToValueAtTime(0.0001, startedAt + 30);
-  klaxonOsc.connect(klaxonGain);
-  klaxonGain.connect(masterGain);
-  klaxonOsc.start(startedAt);
-  klaxonOsc.stop(startedAt + 30);
 
   const reasonText = reasons.slice(0, 2).join(". ");
 
@@ -104,7 +122,7 @@ export function playCriticalPatientAlarm(
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 0.95;
         utterance.pitch = 1;
-        utterance.volume = 1;
+        utterance.volume = 0.6; // 40% less loud (60% of 1.0 is 0.6)
         window.speechSynthesis.speak(utterance);
       }
     }, delayMs);
@@ -132,13 +150,8 @@ export function playCriticalPatientAlarm(
         // already stopped
       }
     });
-    try {
-      klaxonOsc.stop();
-    } catch {
-      // already stopped
-    }
     masterGain.disconnect();
-  }, CRITICAL_ALARM_MIN_DURATION_MS + 500);
+  }, 30_000);
 
   activeAlarmStop = () => {
     clearTimeout(autoStopTimeout);
@@ -150,11 +163,6 @@ export function playCriticalPatientAlarm(
         // already stopped
       }
     });
-    try {
-      klaxonOsc.stop();
-    } catch {
-      // already stopped
-    }
     try {
       masterGain.disconnect();
     } catch {

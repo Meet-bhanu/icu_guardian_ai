@@ -30,7 +30,7 @@ function parseBloodPressure(bp: string) {
 
 export default function LiveMonitoringPage() {
   const { isPatient, user: patientUser, session } = usePatientAuth();
-  const displayName = isPatient && patientUser ? patientUser.name : "John Smith";
+  const displayName = (isPatient && patientUser && patientUser.name) ? patientUser.name : "John Smith";
   const displayBed = isPatient && session ? session.bedNo : "ICU-01";
   const displayId = isPatient && session ? session.patientId : "P001";
 

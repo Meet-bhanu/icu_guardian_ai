@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Heart, Eye, EyeOff } from "lucide-react";
+import { Heart, Eye, EyeOff, RefreshCw, Info, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { getLoginUrl } from "@/const";
 import { setPatientSession } from "@/lib/patientSession";
+import { cn } from "@/lib/utils";
 
 interface LoginLayoutProps {
   title: string;
@@ -25,20 +26,82 @@ export default function LoginLayout({
 }: LoginLayoutProps) {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(""); // acts as email address
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
 
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [captchaText, setCaptchaText] = useState("");
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaError, setCaptchaError] = useState("");
+
+  const generateCaptcha = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let text = "";
+    for (let i = 0; i < 6; i++) {
+      text += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaText(text);
+    setCaptchaInput("");
+    setCaptchaError("");
+  };
+
+  useEffect(() => {
+    generateCaptcha();
+  }, []);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setEmailError("");
+    setPasswordError("");
+    setCaptchaError("");
+
+    // 1. Email Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(username)) {
+      setEmailError("enter a valid email");
+      return;
+    }
+
+    // 2. Password Strength Validation
+    if (password.length < 8) {
+      setPasswordError("Password must be at least 8 characters long");
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setPasswordError("Password must contain at least 1 uppercase letter");
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      setPasswordError("Password must contain at least 1 lowercase letter");
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      setPasswordError("Password must contain at least 1 numerical character");
+      return;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      setPasswordError("Password must contain at least 1 special character");
+      return;
+    }
+
+    // 3. Captcha Validation
+    if (captchaInput.trim().toUpperCase() !== captchaText) {
+      setCaptchaError("enter valid captcha");
+      generateCaptcha();
+      return;
+    }
+
     if (role === "patient") {
-      const patientId = username.trim() || "P001";
+      const match = username.match(/^p(\d+)/i);
+      const patientId = match ? `P${match[1].padStart(3, "0")}` : "P001";
       setPatientSession({
         patientId,
-        name: username.trim() || "John Smith",
-        email: `${patientId.toLowerCase()}@patient.healthhalo.com`,
+        name: username.split("@")[0].split(".").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" "),
+        email: username,
         role: "patient",
-        bedNo: "ICU-01",
+        bedNo: `ICU-0${patientId.replace(/\D/g, "") || "1"}`,
       });
       setLocation("/dashboard");
       return;
@@ -80,18 +143,79 @@ export default function LoginLayout({
             <p className="text-muted-foreground mt-2 font-medium">{subtitle}</p>
           </div>
 
+          {role === "patient" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 space-y-3">
+                <h3 className="text-sm font-bold text-primary flex items-center gap-1.5">
+                  <Info className="w-4 h-4" />
+                  Patient Portal Access
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Welcome to your secure patient workspace. Here you can monitor your health metrics, view prescribed medication logs, consult assigned doctors, and view family contact listings.
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-[11px] font-medium text-gray-600">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    Live Health Vitals
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    Assigned Doctors
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    Medication Schedules
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    Family Alert Feed
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200/60 text-xs space-y-1">
+                <p className="font-semibold text-amber-800 flex items-center gap-1">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                  Demonstration Credentials:
+                </p>
+                <p className="text-amber-700 mt-1">
+                  Email: <span className="font-mono font-bold select-all text-amber-900 bg-amber-100/50 px-1 py-0.5 rounded">p001@patient.healthhalo.com</span>
+                </p>
+                <p className="text-amber-700">
+                  Password: <span className="font-mono font-bold select-all text-amber-900 bg-amber-100/50 px-1 py-0.5 rounded">SecureP@ss123</span>
+                </p>
+              </div>
+            </div>
+          )}
+          {role === "admin" && (
+            <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200/60 text-xs space-y-1">
+              <p className="font-semibold text-amber-800 flex items-center gap-1">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                Admin Demonstration Credentials:
+              </p>
+              <p className="text-amber-700 mt-1">
+                Email: <span className="font-mono font-bold select-all text-amber-900 bg-amber-100/50 px-1 py-0.5 rounded">admin@healthhalo.com</span>
+              </p>
+              <p className="text-amber-700">
+                Password: <span className="font-mono font-bold select-all text-amber-900 bg-amber-100/50 px-1 py-0.5 rounded">AdminP@ss123</span>
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username">
-                {role === "admin" ? "Admin ID / Username" : "Patient ID / Username"}
-              </Label>
+              <Label htmlFor="username">Email Address</Label>
               <Input
                 id="username"
-                placeholder={role === "admin" ? "Enter admin ID" : "Enter patient ID"}
+                type="email"
+                placeholder={role === "admin" ? "admin@healthhalo.com" : "p001@patient.healthhalo.com"}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="h-11"
+                className={cn("h-11", emailError && "border-red-500 focus-visible:ring-red-400")}
               />
+              {emailError && (
+                <p className="text-xs font-semibold text-red-500 mt-1">{emailError}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -103,7 +227,7 @@ export default function LoginLayout({
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 pr-10"
+                  className={cn("h-11 pr-10", passwordError && "border-red-500 focus-visible:ring-red-400")}
                 />
                 <button
                   type="button"
@@ -113,6 +237,47 @@ export default function LoginLayout({
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {passwordError && (
+                <p className="text-xs font-semibold text-red-500 mt-1">{passwordError}</p>
+              )}
+            </div>
+
+            {/* Captcha Section */}
+            <div className="space-y-2">
+              <Label htmlFor="captcha">Verification Code</Label>
+              <div className="flex gap-2 items-center">
+                <div
+                  className="h-11 flex-1 bg-gray-100 rounded-md flex items-center justify-center font-mono text-xl font-bold tracking-widest text-primary border border-dashed border-gray-300 select-none relative overflow-hidden"
+                  style={{
+                    textDecoration: "line-through",
+                    fontStyle: "italic",
+                    background: "linear-gradient(45deg, #f3f4f6 25%, #e5e7eb 25%, #e5e7eb 50%, #f3f4f6 50%, #f3f4f6 75%, #e5e7eb 75%, #e5e7eb 100%)",
+                    backgroundSize: "20px 20px"
+                  }}
+                >
+                  <span className="relative z-10 text-gray-700 drop-shadow">{captchaText}</span>
+                  <div className="absolute inset-0 bg-black/5 mix-blend-overlay pointer-events-none" />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 shrink-0"
+                  onClick={generateCaptcha}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </div>
+              <Input
+                id="captcha"
+                placeholder="Enter captcha"
+                value={captchaInput}
+                onChange={(e) => setCaptchaInput(e.target.value)}
+                className={cn("h-11", captchaError && "border-red-500 focus-visible:ring-red-400")}
+              />
+              {captchaError && (
+                <p className="text-xs font-semibold text-red-500 mt-1">{captchaError}</p>
+              )}
             </div>
 
             <div className="flex items-center gap-2">

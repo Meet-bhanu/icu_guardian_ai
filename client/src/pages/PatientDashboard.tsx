@@ -1,5 +1,5 @@
 import PatientLayout from "@/components/PatientLayout";
-import ICUMonitorWaveform from "@/components/ICUMonitorWaveform";
+
 import LiveCameraFeed from "@/components/LiveCameraFeed";
 import VitalSignsCard from "@/components/VitalSignsCard";
 import { Card } from "@/components/ui/card";
@@ -143,34 +143,13 @@ export default function PatientDashboard() {
           </Card>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div>
           <Card className="overflow-hidden p-0">
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">Live Camera Preview</h2>
             </div>
             <LiveCameraFeed autoStart label={`${session?.bedNo ?? "ICU-01"} — Bed View`} />
           </Card>
-
-          <div className="space-y-3">
-            <h2 className="text-lg font-semibold text-gray-900">Live Waveforms</h2>
-            <ICUMonitorWaveform
-              type="ecg"
-              label="ECG — Heart Rate"
-              value={heartRate}
-              unit="bpm"
-              heartRate={heartRate}
-              size="large"
-            />
-            <ICUMonitorWaveform
-              type="spo2"
-              label="SpO₂ — Oxygen Level"
-              value={spO2}
-              unit="%"
-              heartRate={heartRate}
-              color="#38bdf8"
-              size="large"
-            />
-          </div>
         </div>
 
         <VitalSignsCard
