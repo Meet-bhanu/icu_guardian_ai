@@ -54,12 +54,8 @@ export const adminNavItems: NavItem[] = [
   { icon: Users, label: "Patients", path: "/dashboard/patients" },
   { icon: Monitor, label: "Live Monitoring", path: "/dashboard/monitoring" },
   { icon: Activity, label: "Waveforms", path: "/dashboard/waveforms" },
-  { icon: FileText, label: "Reports", path: "/dashboard/reports" },
-  { icon: TrendingUp, label: "Health Trends", path: "/dashboard/trends" },
   { icon: Pill, label: "Medications", path: "/dashboard/medications" },
   { icon: Bell, label: "Alerts", path: "/dashboard/alerts" },
-  { icon: Stethoscope, label: "Doctors", path: "/dashboard/doctors" },
-  { icon: Contact, label: "Family Contacts", path: "/dashboard/family" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
@@ -67,7 +63,11 @@ export const patientNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/patient/dashboard" },
   { icon: Monitor, label: "Live Monitoring", path: "/patient/monitoring" },
   { icon: Activity, label: "Waveforms", path: "/patient/waveforms" },
+  { icon: FileText, label: "Reports", path: "/patient/reports" },
+  { icon: TrendingUp, label: "Health Trends", path: "/patient/trends" },
   { icon: Pill, label: "Medications", path: "/patient/medications" },
+  { icon: Stethoscope, label: "Doctors", path: "/patient/doctors" },
+  { icon: Contact, label: "Family Contacts", path: "/patient/family" },
 ];
 
 interface AppLayoutProps {

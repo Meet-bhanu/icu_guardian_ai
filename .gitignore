@@ -40,7 +40,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Runtime data
-pids
+data/
 *.pid
 *.seed
 *.pid.lock

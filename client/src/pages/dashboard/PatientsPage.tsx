@@ -20,9 +20,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { patients } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
+import { Link } from "wouter";
 
 const statusStyles = {
   Critical: "bg-red-100 text-red-700",
@@ -100,9 +101,15 @@ export default function PatientsPage() {
               </TableHeader>
               <TableBody>
                 {patients.map((patient) => (
-                  <TableRow key={patient.id}>
+                  <TableRow
+                    key={patient.id}
+                    className="cursor-pointer hover:bg-primary/5"
+                    onClick={() => setLocation(`/dashboard/patients/${patient.id}`)}
+                  >
                     <TableCell className="font-mono text-sm">{patient.id}</TableCell>
-                    <TableCell className="font-medium">{patient.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="text-primary hover:underline">{patient.name}</span>
+                    </TableCell>
                     <TableCell>{patient.age}</TableCell>
                     <TableCell>{patient.gender}</TableCell>
                     <TableCell>{patient.bedNo}</TableCell>
@@ -113,11 +120,32 @@ export default function PatientsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500">
+                      <div className="flex justify-end gap-1 items-center">
+                        <Link href={`/dashboard/patients/${patient.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary gap-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

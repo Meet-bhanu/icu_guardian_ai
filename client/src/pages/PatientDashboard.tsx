@@ -5,6 +5,7 @@ import VitalSignsCard from "@/components/VitalSignsCard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { useCriticalVitalMonitor } from "@/hooks/useCriticalVitalMonitor";
 import { liveVitals } from "@/lib/mockData";
 import {
   Heart,
@@ -16,7 +17,7 @@ import {
   Shield,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function PatientDashboard() {
   const { user, session } = usePatientAuth();
@@ -24,6 +25,20 @@ export default function PatientDashboard() {
   const [spO2, setSpO2] = useState(97);
   const patientName = user?.name ?? "John Smith";
   const patientId = session?.patientId ?? "P001";
+
+  const vitals = useMemo(
+    () => ({
+      heartRate,
+      spO2,
+      systolicBP: 118,
+      diastolicBP: 78,
+      temperature: 37.1,
+      respiratoryRate: liveVitals.respiratoryRate,
+    }),
+    [heartRate, spO2],
+  );
+
+  useCriticalVitalMonitor({ patientId, patientName, vitals });
 
   useEffect(() => {
     const id = setInterval(() => {

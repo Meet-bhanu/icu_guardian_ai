@@ -37,8 +37,7 @@ const footerSections: FooterSection[] = [
     links: [
       { label: "Monitoring", href: "/#about" },
       { label: "Alerts", href: "/dashboard/alerts" },
-      { label: "Medications", href: "/dashboard/medications" },
-      { label: "Reports", href: "/dashboard/reports" },
+      { label: "Patients", href: "/dashboard/patients" },
       { label: "Support", href: "mailto:support@healthhalo.com" },
     ],
   },

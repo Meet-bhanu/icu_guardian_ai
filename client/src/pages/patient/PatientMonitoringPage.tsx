@@ -4,6 +4,8 @@ import LiveCameraFeed from "@/components/LiveCameraFeed";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { useCriticalVitalMonitor } from "@/hooks/useCriticalVitalMonitor";
+import { evaluatePatientVitals } from "@/lib/vitalMonitoring";
 import { liveVitals } from "@/lib/mockData";
 import {
   Heart,
@@ -14,7 +16,13 @@ import {
   User,
   BedDouble,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
+
+function parseBloodPressure(bp: string) {
+  const [systolic, diastolic] = bp.split("/").map((v) => parseInt(v, 10));
+  return { systolicBP: systolic, diastolicBP: diastolic };
+}
 
 const aiDetections = [
   { label: "Motion Detection", active: true, icon: Activity },
@@ -24,21 +32,36 @@ const aiDetections = [
 
 export default function PatientMonitoringPage() {
   const { user, session } = usePatientAuth();
+  const initialBp = parseBloodPressure(liveVitals.bloodPressure);
   const [heartRate, setHeartRate] = useState(liveVitals.heartRate);
   const [spO2, setSpO2] = useState(liveVitals.spO2);
+  const [systolicBP, setSystolicBP] = useState(initialBp.systolicBP);
+  const [diastolicBP, setDiastolicBP] = useState(initialBp.diastolicBP);
+  const [respiratoryRate, setRespiratoryRate] = useState(liveVitals.respiratoryRate);
+  const [faceDetected, setFaceDetected] = useState(true);
   const patientName = user?.name ?? "John Smith";
   const patientId = session?.patientId ?? "P001";
+
+  const vitals = useMemo(
+    () => ({ heartRate, spO2, systolicBP, diastolicBP, respiratoryRate, temperature: 37.8 }),
+    [heartRate, spO2, systolicBP, diastolicBP, respiratoryRate],
+  );
+  const vitalEval = evaluatePatientVitals(vitals);
+
+  useCriticalVitalMonitor({ patientId, patientName, vitals });
 
   useEffect(() => {
     const id = setInterval(() => {
       setHeartRate((hr) => {
-        const next = hr + (Math.random() - 0.5) * 2;
-        return Math.round(Math.min(120, Math.max(60, next)));
+        const spike = Math.random() < 0.08 ? 18 : 0;
+        return Math.round(Math.min(145, Math.max(55, hr + (Math.random() - 0.45) * 4 + spike)));
       });
       setSpO2((o2) => {
-        const next = o2 + (Math.random() - 0.5) * 0.4;
-        return Math.round(Math.min(100, Math.max(90, next)));
+        const drop = Math.random() < 0.08 ? -6 : 0;
+        return Math.round(Math.min(100, Math.max(82, o2 + (Math.random() - 0.5) * 1.2 + drop)));
       });
+      setSystolicBP((bp) => Math.round(Math.min(195, Math.max(85, bp + (Math.random() - 0.5) * 6))));
+      setRespiratoryRate((rr) => Math.round(Math.min(34, Math.max(10, rr + (Math.random() - 0.5) * 2))));
     }, 2000);
     return () => clearInterval(id);
   }, []);
@@ -56,7 +79,11 @@ export default function PatientMonitoringPage() {
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <Card className="overflow-hidden p-0">
-              <LiveCameraFeed label={`${session?.bedNo ?? "ICU-01"} — Bed Monitoring`} />
+              <LiveCameraFeed
+                label={`${session?.bedNo ?? "ICU-01"} — Bed Monitoring`}
+                patientName={patientName}
+                onPresenceChange={setFaceDetected}
+              />
             </Card>
 
             <div className="flex flex-wrap gap-3">
@@ -67,13 +94,21 @@ export default function PatientMonitoringPage() {
                 >
                   <det.icon className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium text-gray-700">{det.label}</span>
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      det.label === "Face Detection"
+                        ? faceDetected
+                          ? "bg-green-500"
+                          : "bg-amber-500"
+                        : "bg-green-500"
+                    }`}
+                  />
                 </div>
               ))}
             </div>
           </div>
 
-          <Card className="p-5">
+          <Card className={cn("p-5", vitalEval.isCritical && "border-red-500 ring-2 ring-red-300")}>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Real-time Vitals</h2>
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-red-50 border border-red-100">
@@ -97,7 +132,7 @@ export default function PatientMonitoringPage() {
                   <Gauge className="w-4 h-4 text-green-500" />
                   <span className="text-sm font-medium text-green-600">Blood Pressure</span>
                 </div>
-                <p className="text-3xl font-bold text-green-700">{liveVitals.bloodPressure}</p>
+                <p className="text-3xl font-bold text-green-700">{systolicBP}/{diastolicBP}</p>
                 <p className="text-xs text-green-500 mt-1">mmHg</p>
               </div>
               <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
@@ -105,7 +140,7 @@ export default function PatientMonitoringPage() {
                   <Wind className="w-4 h-4 text-orange-500" />
                   <span className="text-sm font-medium text-orange-600">Respiratory Rate</span>
                 </div>
-                <p className="text-3xl font-bold text-orange-700">{liveVitals.respiratoryRate}</p>
+                <p className="text-3xl font-bold text-orange-700">{respiratoryRate}</p>
                 <p className="text-xs text-orange-500 mt-1">breaths/min</p>
               </div>
             </div>

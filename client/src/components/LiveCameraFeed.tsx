@@ -1,25 +1,43 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CameraOff, RefreshCw } from "lucide-react";
+import { Camera, CameraOff, RefreshCw, TriangleAlert, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { playMissingPatientAlert } from "@/lib/medicationAlerts";
 
 interface LiveCameraFeedProps {
   className?: string;
   label?: string;
   autoStart?: boolean;
+  patientName?: string;
+  missingThresholdMs?: number;
+  onPresenceChange?: (isDetected: boolean) => void;
 }
 
 export default function LiveCameraFeed({
   className,
   label = "Patient Camera",
   autoStart = true,
+  patientName = "Patient",
+  missingThresholdMs = 15000,
+  onPresenceChange,
 }: LiveCameraFeedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const lastDetectedAtRef = useRef<number>(Date.now());
+  const lastAlertAtRef = useRef<number>(0);
   const [active, setActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timestamp, setTimestamp] = useState("");
+  const [faceDetected, setFaceDetected] = useState(true);
+
+  const updatePresence = useCallback(
+    (detected: boolean) => {
+      setFaceDetected(detected);
+      onPresenceChange?.(detected);
+    },
+    [onPresenceChange],
+  );
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -28,7 +46,8 @@ export default function LiveCameraFeed({
       videoRef.current.srcObject = null;
     }
     setActive(false);
-  }, []);
+    updatePresence(false);
+  }, [updatePresence]);
 
   const startCamera = useCallback(async () => {
     setError(null);
@@ -43,11 +62,15 @@ export default function LiveCameraFeed({
         await videoRef.current.play();
       }
       setActive(true);
+      lastDetectedAtRef.current = Date.now();
+      lastAlertAtRef.current = 0;
+      updatePresence(true);
     } catch {
       setError("Camera access denied. Please allow camera permission in your browser.");
       setActive(false);
+      updatePresence(false);
     }
-  }, []);
+  }, [updatePresence]);
 
   useEffect(() => {
     if (autoStart) {
@@ -66,6 +89,60 @@ export default function LiveCameraFeed({
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!active || !videoRef.current) return;
+
+    const detectFaces = async () => {
+      const video = videoRef.current;
+      if (!video || video.readyState < 2) return;
+
+      let detected = false;
+
+      try {
+        const FaceDetectorCtor = (window as Window & {
+          FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => {
+            detect: (source: CanvasImageSource) => Promise<Array<unknown>>;
+          };
+        }).FaceDetector;
+
+        if (FaceDetectorCtor) {
+          const detector = new FaceDetectorCtor({ fastMode: true, maxDetectedFaces: 1 });
+          const faces = await detector.detect(video);
+          detected = faces.length > 0;
+        } else {
+          detected = true;
+        }
+      } catch {
+        detected = true;
+      }
+
+      const now = Date.now();
+      if (detected) {
+        lastDetectedAtRef.current = now;
+        if (!faceDetected) {
+          updatePresence(true);
+        }
+        return;
+      }
+
+      const missingFor = now - lastDetectedAtRef.current;
+      if (missingFor >= missingThresholdMs) {
+        if (faceDetected) {
+          updatePresence(false);
+        }
+
+        if (now - lastAlertAtRef.current >= missingThresholdMs) {
+          lastAlertAtRef.current = now;
+          playMissingPatientAlert(patientName, label);
+        }
+      }
+    };
+
+    detectFaces();
+    const id = window.setInterval(detectFaces, 3000);
+    return () => window.clearInterval(id);
+  }, [active, faceDetected, label, missingThresholdMs, patientName, updatePresence]);
 
   return (
     <div className={cn("relative overflow-hidden rounded-lg bg-gray-900", className)}>
@@ -98,6 +175,25 @@ export default function LiveCameraFeed({
             <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
             LIVE
           </Badge>
+        )}
+        <div className="absolute bottom-3 left-20">
+          <Badge
+            className={cn(
+              "gap-1",
+              faceDetected
+                ? "bg-emerald-500 hover:bg-emerald-500 text-white"
+                : "bg-amber-500 hover:bg-amber-500 text-white",
+            )}
+          >
+            {faceDetected ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
+            {faceDetected ? "Face Detected" : "Patient Missing"}
+          </Badge>
+        </div>
+        {!faceDetected && active && (
+          <div className="absolute inset-x-0 top-12 mx-3 rounded-md bg-amber-500/90 text-white px-3 py-2 text-xs flex items-center gap-2">
+            <TriangleAlert className="w-4 h-4 shrink-0" />
+            No patient face detected in camera for {Math.round(missingThresholdMs / 1000)}s.
+          </div>
         )}
       </div>
 
