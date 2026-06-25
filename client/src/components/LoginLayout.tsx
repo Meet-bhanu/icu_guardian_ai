@@ -96,6 +96,7 @@ export default function LoginLayout({
     if (role === "patient") {
       const match = username.match(/^p(\d+)/i);
       const patientId = match ? `P${match[1].padStart(3, "0")}` : "P001";
+      sessionStorage.removeItem("icu-admin-logged-in");
       setPatientSession({
         patientId,
         name: username.split("@")[0].split(".").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" "),
@@ -103,9 +104,10 @@ export default function LoginLayout({
         role: "patient",
         bedNo: `ICU-0${patientId.replace(/\D/g, "") || "1"}`,
       });
-      setLocation("/dashboard");
+      setLocation("/patient/dashboard");
       return;
     }
+    sessionStorage.removeItem("icu-patient-session");
     sessionStorage.setItem("icu-admin-logged-in", "true");
     setLocation("/dashboard");
   };
@@ -122,7 +124,7 @@ export default function LoginLayout({
         role: "patient",
         bedNo: "ICU-01",
       });
-      setLocation("/dashboard");
+      setLocation("/patient/dashboard");
     } else {
       sessionStorage.setItem("icu-admin-logged-in", "true");
       setLocation("/dashboard");

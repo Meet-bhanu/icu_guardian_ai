@@ -19,14 +19,13 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  liveVitals,
   recentAlerts,
   aiMonitoringStatus,
 } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
-import { usePatientAuth } from "@/hooks/usePatientAuth";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { getPatientsList } from "@/lib/patientData";
+import { setAdminSelectedPatientId } from "@/hooks/useAdminSelectedPatient";
 import { useEffect, useState } from "react";
 
 const severityStyles = {
@@ -64,7 +63,6 @@ function getPatientVitals(status: "Critical" | "Warning" | "Stable", seed: strin
 }
 
 export default function Dashboard() {
-  const { isPatient, user: patientUser, session } = usePatientAuth();
   const [, setLocation] = useLocation();
   const [patientsList, setPatientsList] = useState<any[]>([]);
 
@@ -72,8 +70,10 @@ export default function Dashboard() {
     setPatientsList(getPatientsList());
   }, []);
 
-  const displayName = isPatient && patientUser ? patientUser.name : "John Smith";
-  const displayId = isPatient && session ? session.patientId : "P001";
+  const handlePatientSelect = (patientId: string) => {
+    setAdminSelectedPatientId(patientId);
+    setLocation(`/dashboard/patients/${patientId}`);
+  };
 
   // Calculate dynamic stats
   const totalCount = patientsList.length;
@@ -81,127 +81,6 @@ export default function Dashboard() {
   const warningCount = patientsList.filter(p => p.status === "Warning").length;
   const stableCount = patientsList.filter(p => p.status === "Stable").length;
 
-  if (isPatient) {
-    return (
-      <AppLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="hh-page-title">Dashboard</h1>
-            <p className="hh-page-subtitle">ICU overview and real-time monitoring</p>
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-6">
-            <Card className="p-5 lg:col-span-2">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Live Overview — {displayName} ({displayId})
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 rounded-xl bg-red-50 border border-red-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Heart className="w-4 h-4 text-red-500" />
-                    <span className="text-xs font-medium text-red-600">Heart Rate</span>
-                  </div>
-                  <p className="text-2xl font-bold text-red-700">{liveVitals.heartRate}</p>
-                  <p className="text-xs text-red-500 mt-1">bpm</p>
-                </div>
-                <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Droplets className="w-4 h-4 text-blue-500" />
-                    <span className="text-xs font-medium text-blue-600">SpO₂</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-700">{liveVitals.spO2}%</p>
-                  <p className="text-xs text-blue-500 mt-1">Normal range</p>
-                </div>
-                <div className="p-4 rounded-xl bg-green-50 border border-green-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Gauge className="w-4 h-4 text-green-500" />
-                    <span className="text-xs font-medium text-green-600">Blood Pressure</span>
-                  </div>
-                  <p className="text-2xl font-bold text-green-700">{liveVitals.bloodPressure}</p>
-                  <p className="text-xs text-green-500 mt-1">mmHg</p>
-                </div>
-                <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Wind className="w-4 h-4 text-orange-500" />
-                    <span className="text-xs font-medium text-orange-600">Resp. Rate</span>
-                  </div>
-                  <p className="text-2xl font-bold text-orange-700">{liveVitals.respiratoryRate}</p>
-                  <p className="text-xs text-orange-500 mt-1">breaths/min</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-5">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Monitoring Status</h2>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <Camera className="w-5 h-5 text-primary" />
-                    <span className="text-sm font-medium text-gray-700">Cameras</span>
-                  </div>
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                    {aiMonitoringStatus.cameras}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <Brain className="w-5 h-5 text-primary" />
-                    <span className="text-sm font-medium text-gray-700">AI Detection</span>
-                  </div>
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                    {aiMonitoringStatus.aiDetection}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-5 h-5 text-primary" />
-                    <span className="text-sm font-medium text-gray-700">System Health</span>
-                  </div>
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                    {aiMonitoringStatus.systemHealth}
-                  </Badge>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Recent Alerts */}
-          <Card className="p-5">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Alerts</h2>
-            <div className="space-y-3">
-              {recentAlerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        "w-2 h-2 rounded-full",
-                        alert.severity === "critical" ? "bg-red-500" :
-                        alert.severity === "warning" ? "bg-orange-500" : "bg-blue-500"
-                      )}
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{alert.title}</p>
-                      <p className="text-xs text-gray-500">Patient {alert.patientId}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge className={cn("text-xs border", severityStyles[alert.severity])}>
-                      {alert.severity}
-                    </Badge>
-                    <span className="text-xs text-gray-400">{alert.time}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  // Admin / Doctor view
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -289,7 +168,7 @@ export default function Dashboard() {
                       <div 
                         key={patient.id} 
                         className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:bg-gray-50/50 px-2 rounded-xl transition-all cursor-pointer"
-                        onClick={() => setLocation(`/dashboard/patients/${patient.id}`)}
+                        onClick={() => handlePatientSelect(patient.id)}
                       >
                         {/* Info Block */}
                         <div className="space-y-1 min-w-[150px]">
@@ -459,7 +338,10 @@ export default function Dashboard() {
                   <div
                     key={alert.id}
                     className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-all cursor-pointer hover:border-gray-200"
-                    onClick={() => setLocation(`/dashboard/patients/${alert.patientId}`)}
+                    onClick={() => {
+                      setAdminSelectedPatientId(alert.patientId);
+                      setLocation(`/dashboard/patients/${alert.patientId}`);
+                    }}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className={cn(

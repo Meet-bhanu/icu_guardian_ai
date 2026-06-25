@@ -1,4 +1,5 @@
 import AppLayout from "@/components/AppLayout";
+import AdminPatientSelector from "@/components/AdminPatientSelector";
 import { Card } from "@/components/ui/card";
 import {
   Heart,
@@ -11,7 +12,7 @@ import {
 } from "lucide-react";
 import { liveVitals } from "@/lib/mockData";
 import LiveCameraFeed from "@/components/LiveCameraFeed";
-import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { useAdminSelectedPatient } from "@/hooks/useAdminSelectedPatient";
 import { useCriticalVitalMonitor } from "@/hooks/useCriticalVitalMonitor";
 import { evaluatePatientVitals } from "@/lib/vitalMonitoring";
 import { useEffect, useMemo, useState } from "react";
@@ -29,10 +30,7 @@ function parseBloodPressure(bp: string) {
 }
 
 export default function LiveMonitoringPage() {
-  const { isPatient, user: patientUser, session } = usePatientAuth();
-  const displayName = (isPatient && patientUser && patientUser.name) ? patientUser.name : "John Smith";
-  const displayBed = isPatient && session ? session.bedNo : "ICU-01";
-  const displayId = isPatient && session ? session.patientId : "P001";
+  const { patientId, setPatientId, patientName, bedNo } = useAdminSelectedPatient();
 
   const initialBp = parseBloodPressure(liveVitals.bloodPressure);
   const [heartRate, setHeartRate] = useState(liveVitals.heartRate);
@@ -57,8 +55,8 @@ export default function LiveMonitoringPage() {
   const vitalEval = evaluatePatientVitals(vitals);
 
   useCriticalVitalMonitor({
-    patientId: displayId,
-    patientName: displayName,
+    patientId,
+    patientName,
     vitals,
   });
 
@@ -77,29 +75,33 @@ export default function LiveMonitoringPage() {
       setRespiratoryRate((rr) => Math.round(Math.min(34, Math.max(10, rr + (Math.random() - 0.5) * 2))));
     }, 2000);
     return () => clearInterval(id);
-  }, []);
+  }, [patientId]);
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Live Monitoring</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Real-time patient surveillance — {displayName} ({displayBed})
-          </p>
-          {vitalEval.isCritical && (
-            <p className="text-red-600 text-sm font-semibold mt-2 animate-pulse">
-              Critical vitals detected — hospital-wide code blue alarm will sound
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Live Monitoring</h1>
+            <p className="text-gray-500 text-sm mt-1">
+              Real-time patient surveillance — {patientName} ({bedNo})
             </p>
-          )}
+            {vitalEval.isCritical && (
+              <p className="text-red-600 text-sm font-semibold mt-2 animate-pulse">
+                Critical vitals detected — hospital-wide code blue alarm will sound
+              </p>
+            )}
+          </div>
+          <AdminPatientSelector patientId={patientId} onPatientChange={setPatientId} />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <LiveCameraFeed
-              label={`${displayBed} — Bed Monitoring`}
+              key={patientId}
+              label={`${bedNo} — Bed Monitoring`}
               autoStart
-              patientName={displayName}
+              patientName={patientName}
               onPresenceChange={setFaceDetected}
             />
 

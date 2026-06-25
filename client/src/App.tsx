@@ -36,6 +36,8 @@ import PatientPortalOverviewPage from "./pages/patient/PatientOverviewPage";
 import PatientMonitoringPage from "./pages/patient/PatientMonitoringPage";
 import PatientWaveformsPage from "./pages/patient/PatientWaveformsPage";
 import PatientMedicationsPage from "./pages/patient/PatientMedicationsPage";
+import PatientAlertsPage from "./pages/patient/PatientAlertsPage";
+import PatientSettingsPage from "./pages/patient/PatientSettingsPage";
 import PatientPortalReportsPage from "./pages/patient/PatientReportsPage";
 import PatientPortalTrendsPage from "./pages/patient/PatientTrendsPage";
 import PatientPortalDoctorsPage from "./pages/patient/PatientDoctorsPage";
@@ -119,10 +121,12 @@ function Router() {
       <Route path="/patient/overview" component={PatientPortalOverviewPage} />
       <Route path="/patient/monitoring" component={PatientMonitoringPage} />
       <Route path="/patient/waveforms" component={PatientWaveformsPage} />
+      <Route path="/patient/medications" component={PatientMedicationsPage} />
+      <Route path="/patient/alerts" component={PatientAlertsPage} />
+      <Route path="/patient/settings" component={PatientSettingsPage} />
       <Route path="/patient/reports/upload" component={PatientPortalUploadPage} />
       <Route path="/patient/reports" component={PatientPortalReportsPage} />
       <Route path="/patient/trends" component={PatientPortalTrendsPage} />
-      <Route path="/patient/medications" component={PatientMedicationsPage} />
       <Route path="/patient/doctors" component={PatientPortalDoctorsPage} />
       <Route path="/patient/family" component={PatientPortalFamilyPage} />
 
