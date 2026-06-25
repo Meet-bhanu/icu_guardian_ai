@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import AdminPatientQuickAccess from "@/components/AdminPatientQuickAccess";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -48,6 +49,7 @@ export interface NavItem {
 
 export const adminNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: Users, label: "Patients", path: "/dashboard/patients" },
   { icon: Monitor, label: "Live Monitoring", path: "/dashboard/monitoring" },
   { icon: Activity, label: "Waveforms", path: "/dashboard/waveforms" },
   { icon: Pill, label: "Medications", path: "/dashboard/medications" },
@@ -228,6 +230,8 @@ export default function AppLayout({
           >
             <Menu className="w-5 h-5" />
           </button>
+
+          {!isPatient && <AdminPatientQuickAccess />}
 
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />

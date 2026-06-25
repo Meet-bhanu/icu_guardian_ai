@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import AppLayout from "@/components/AppLayout";
+import { setAdminSelectedPatientId } from "@/hooks/useAdminSelectedPatient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -50,6 +52,12 @@ export default function PatientDetailLayout({
 }: PatientDetailLayoutProps) {
   const { patientId, patient, match } = usePatientDetailRoute();
   const [location] = useLocation();
+
+  useEffect(() => {
+    if (patientId) {
+      setAdminSelectedPatientId(patientId);
+    }
+  }, [patientId]);
 
   if (!match || !patient) {
     return (

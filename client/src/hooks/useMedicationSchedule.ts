@@ -8,6 +8,7 @@ import {
   isMedicationOverdue,
   medicationStorageKey,
   playMedicationAlert,
+  stopMedicationAlertVoice,
 } from "@/lib/medicationAlerts";
 import { toast } from "sonner";
 
@@ -42,6 +43,9 @@ export function useMedicationSchedule(patientId: string, patientName: string) {
     (medicationId: number, status: MedicationAdminStatus) => {
       setStatuses((prev) => ({ ...prev, [medicationId]: status }));
       saveStatus(patientId, medicationId, status);
+      if (status === "given") {
+        stopMedicationAlertVoice();
+      }
       if (status !== "missed") {
         alertedRef.current.delete(`${patientId}:${medicationId}:${todayKey()}`);
       }

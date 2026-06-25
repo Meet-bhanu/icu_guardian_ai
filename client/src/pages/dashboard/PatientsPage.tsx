@@ -23,6 +23,7 @@ import {
 import { Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
+import { setAdminSelectedPatientId } from "@/hooks/useAdminSelectedPatient";
 import { getPatientsList, savePatientsList, type Patient } from "@/lib/patientData";
 import { toast } from "sonner";
 import {
@@ -262,7 +263,10 @@ export default function PatientsPage() {
                     <TableRow
                       key={patient.id}
                       className="cursor-pointer hover:bg-gray-50/80 transition-colors"
-                      onClick={() => setLocation(`/dashboard/patients/${patient.id}`)}
+                      onClick={() => {
+                        setAdminSelectedPatientId(patient.id);
+                        setLocation(`/dashboard/patients/${patient.id}`);
+                      }}
                     >
                       <TableCell className="font-mono text-sm font-semibold text-gray-600">{patient.id}</TableCell>
                       <TableCell className="font-semibold">
