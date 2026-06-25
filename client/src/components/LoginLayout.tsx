@@ -106,7 +106,8 @@ export default function LoginLayout({
       setLocation("/dashboard");
       return;
     }
-    setLocation("/dashboard/patients");
+    sessionStorage.setItem("icu-admin-logged-in", "true");
+    setLocation("/dashboard");
   };
 
   const handleOAuthLogin = () => {
@@ -123,7 +124,8 @@ export default function LoginLayout({
       });
       setLocation("/dashboard");
     } else {
-      setLocation("/dashboard/patients");
+      sessionStorage.setItem("icu-admin-logged-in", "true");
+      setLocation("/dashboard");
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard,
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 function getInitials(name?: string | null): string {
   if (!name) return "AD";
@@ -50,6 +51,7 @@ export interface NavItem {
 }
 
 export const adminNavItems: NavItem[] = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Patients", path: "/dashboard/patients" },
   { icon: Monitor, label: "Live Monitoring", path: "/dashboard/monitoring" },
   { icon: Activity, label: "Waveforms", path: "/dashboard/waveforms" },
@@ -111,10 +113,38 @@ export default function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
 
+  const { user, isAuthenticated, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname;
+
+      if (path.startsWith("/dashboard")) {
+        const isDemoAdmin = sessionStorage.getItem("icu-admin-logged-in") === "true";
+        const isBackendAdmin = isAuthenticated && user && user.role !== "patient";
+        if (!isDemoAdmin && !isBackendAdmin) {
+          setLocation("/login/admin");
+        }
+      } else if (path.startsWith("/patient")) {
+        const isDemoPatient = sessionStorage.getItem("icu-patient-session") !== null;
+        const isBackendPatient = isAuthenticated && user && user.role === "patient";
+        if (!isDemoPatient && !isBackendPatient) {
+          setLocation("/login/patient");
+        }
+      }
+    }
+  }, [loading, isAuthenticated, user, location, setLocation]);
+
   const handleLogout = async () => {
     setShowLogout(false);
+    sessionStorage.removeItem("icu-admin-logged-in");
+    sessionStorage.removeItem("icu-patient-session");
     if (resolvedOnLogout) {
       await resolvedOnLogout();
+    } else {
+      await patientLogout();
     }
     setLocation(resolvedLogoutPath);
   };
