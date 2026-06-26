@@ -1,16 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard,
   Users,
   Monitor,
   Activity,
-  FileText,
-  TrendingUp,
   Pill,
   Bell,
-  Stethoscope,
-  Contact,
   Settings,
   LogOut,
   Heart,
@@ -32,7 +28,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import AdminPatientQuickAccess from "@/components/AdminPatientQuickAccess";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 function getInitials(name?: string | null): string {
   if (!name) return "AD";
@@ -63,12 +61,19 @@ export const patientNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/patient/dashboard" },
   { icon: Monitor, label: "Live Monitoring", path: "/patient/monitoring" },
   { icon: Activity, label: "Waveforms", path: "/patient/waveforms" },
-  { icon: FileText, label: "Reports", path: "/patient/reports" },
-  { icon: TrendingUp, label: "Health Trends", path: "/patient/trends" },
   { icon: Pill, label: "Medications", path: "/patient/medications" },
-  { icon: Stethoscope, label: "Doctors", path: "/patient/doctors" },
-  { icon: Contact, label: "Family Contacts", path: "/patient/family" },
+  { icon: Bell, label: "Alerts", path: "/patient/alerts" },
+  { icon: Settings, label: "Settings", path: "/patient/settings" },
 ];
+
+const patientDashboardRedirect: Record<string, string> = {
+  "/dashboard": "/patient/dashboard",
+  "/dashboard/monitoring": "/patient/monitoring",
+  "/dashboard/waveforms": "/patient/waveforms",
+  "/dashboard/medications": "/patient/medications",
+  "/dashboard/alerts": "/patient/alerts",
+  "/dashboard/settings": "/patient/settings",
+};
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -93,9 +98,7 @@ export default function AppLayout({
 }: AppLayoutProps) {
   const { user: patientUser, session, isPatient, logout: patientLogout } = usePatientAuth();
 
-  const resolvedNavItems = (navItems ?? adminNavItems).filter(
-    (item) => !isPatient || item.path !== "/dashboard/patients"
-  );
+  const resolvedNavItems = navItems ?? (isPatient ? patientNavItems : adminNavItems);
   const resolvedUserName = userName ?? (isPatient ? (patientUser?.name ?? "Patient") : "Admin");
   const resolvedUserRole =
     userRole ??
@@ -113,10 +116,44 @@ export default function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
 
+  const { user, isAuthenticated, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname;
+      const isDemoPatient = sessionStorage.getItem("icu-patient-session") !== null;
+      const isBackendPatient = isAuthenticated && user && user.role === "patient";
+      const isPatientUser = isPatient || isDemoPatient || isBackendPatient;
+
+      if (isPatientUser && path.startsWith("/dashboard")) {
+        setLocation(patientDashboardRedirect[path] ?? "/patient/dashboard");
+        return;
+      }
+
+      if (path.startsWith("/dashboard")) {
+        const isDemoAdmin = sessionStorage.getItem("icu-admin-logged-in") === "true";
+        const isBackendAdmin = isAuthenticated && user && user.role !== "patient";
+        if (!isDemoAdmin && !isBackendAdmin) {
+          setLocation("/login/admin");
+        }
+      } else if (path.startsWith("/patient")) {
+        if (!isDemoPatient && !isBackendPatient) {
+          setLocation("/login/patient");
+        }
+      }
+    }
+  }, [loading, isAuthenticated, user, location, setLocation, isPatient]);
+
   const handleLogout = async () => {
     setShowLogout(false);
+    sessionStorage.removeItem("icu-admin-logged-in");
+    sessionStorage.removeItem("icu-patient-session");
     if (resolvedOnLogout) {
       await resolvedOnLogout();
+    } else {
+      await patientLogout();
     }
     setLocation(resolvedLogoutPath);
   };
@@ -193,6 +230,8 @@ export default function AppLayout({
           >
             <Menu className="w-5 h-5" />
           </button>
+
+          {!isPatient && <AdminPatientQuickAccess />}
 
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />

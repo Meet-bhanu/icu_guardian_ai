@@ -10,12 +10,6 @@ interface CriticalAlertOverlayProps {
   onAcknowledge: () => void;
 }
 
-function formatCountdown(elapsedMs: number): string {
-  const remaining = Math.max(0, CRITICAL_ALARM_MIN_DURATION_MS - elapsedMs);
-  const seconds = Math.ceil(remaining / 1000);
-  return `${seconds}s`;
-}
-
 export default function CriticalAlertOverlay({
   alert,
   elapsedMs,
@@ -23,9 +17,15 @@ export default function CriticalAlertOverlay({
   onAcknowledge,
 }: CriticalAlertOverlayProps) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 cursor-pointer"
+      onClick={onAcknowledge}
+    >
       <div className="absolute inset-0 bg-red-950/85 animate-pulse" />
-      <div className="relative w-full max-w-2xl rounded-2xl border-4 border-red-500 bg-red-600 text-white shadow-2xl shadow-red-900/60 p-8 text-center space-y-6">
+      <div 
+        className="relative w-full max-w-2xl rounded-2xl border-4 border-red-500 bg-red-600 text-white shadow-2xl shadow-red-900/60 p-8 text-center space-y-6 cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-center">
           <div className="w-20 h-20 rounded-full bg-white/15 flex items-center justify-center animate-bounce">
             <Siren className="w-10 h-10 text-white" />
@@ -53,25 +53,20 @@ export default function CriticalAlertOverlay({
         </div>
 
         <p className="text-lg font-bold animate-pulse">
-          Hospital-wide critical alarm sounding — doctors respond now
+          Hospital-wide critical alarm sounding — click anywhere to silence
         </p>
 
         <div className="text-sm text-red-100">
-          {canAcknowledge ? (
-            <span>Alarm minimum duration reached. Acknowledge when medical team is responding.</span>
-          ) : (
-            <span>Alarm will continue for at least {formatCountdown(elapsedMs)} more</span>
-          )}
+          <span>Acknowledge when medical team is responding. Click overlay or button to silence.</span>
         </div>
 
         <Button
           size="lg"
           variant="secondary"
-          className="w-full sm:w-auto min-w-[240px] font-bold text-red-700"
-          disabled={!canAcknowledge}
+          className="w-full sm:w-auto min-w-[240px] font-bold text-red-700 shadow-lg hover:scale-105 transition-transform"
           onClick={onAcknowledge}
         >
-          {canAcknowledge ? "Acknowledge & Silence Alarm" : `Alarm active (${formatCountdown(elapsedMs)})`}
+          Acknowledge & Silence Alarm
         </Button>
       </div>
     </div>

@@ -1,26 +1,9 @@
-import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import MedicationsContent from "@/components/patient-sections/MedicationsContent";
-import { usePatientAuth } from "@/hooks/usePatientAuth";
-import { useEffect } from "react";
-import { useLocation } from "wouter";
-import { getPatientById } from "@/lib/patientData";
+import { useAdminSelectedPatient } from "@/hooks/useAdminSelectedPatient";
 
 export default function MedicationsPage() {
-  const { isPatient } = usePatientAuth();
-  const [, setLocation] = useLocation();
-  const [patientId, setPatientId] = useState("P001");
-  const patient = getPatientById(patientId);
-
-  useEffect(() => {
-    if (isPatient) {
-      setLocation("/patient/medications");
-    }
-  }, [isPatient, setLocation]);
-
-  if (isPatient) {
-    return null;
-  }
+  const { patientId, setPatientId, patientName } = useAdminSelectedPatient();
 
   return (
     <AppLayout>
@@ -28,13 +11,13 @@ export default function MedicationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Medications</h1>
           <p className="text-gray-500 text-sm mt-1">
-            ICU medication administration — mark doses as given, not given, or missed
+            ICU medication administration — select a patient to view and manage doses
           </p>
         </div>
 
         <MedicationsContent
           patientId={patientId}
-          patientName={patient?.name ?? patientId}
+          patientName={patientName}
           showPatientSelector
           showAdminSummary
           onPatientChange={setPatientId}

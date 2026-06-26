@@ -11,8 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AlertTriangle, ExternalLink } from "lucide-react";
-import { patients } from "@/lib/mockData";
-import { getMedicationsForPatient, getPatientById } from "@/lib/patientData";
+import { getMedicationsForPatient, getPatientById, getPatientsList } from "@/lib/patientData";
 import { medicationStorageKey } from "@/lib/medicationAlerts";
 import { cn } from "@/lib/utils";
 
@@ -52,9 +51,10 @@ export default function MedicationsContent({
     return () => clearInterval(id);
   }, []);
 
+  const patientsList = getPatientsList();
   const missedForPatient = getMissedCount(patientId);
   const totalMissedAll = showAdminSummary
-    ? patients.reduce((sum, p) => sum + getMissedCount(p.id), 0)
+    ? patientsList.reduce((sum, p) => sum + getMissedCount(p.id), 0)
     : 0;
 
   return (
@@ -73,7 +73,7 @@ export default function MedicationsContent({
                 <SelectValue placeholder="Select patient" />
               </SelectTrigger>
               <SelectContent>
-                {patients.map((p) => (
+                {patientsList.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name} ({p.id})
                   </SelectItem>
@@ -101,7 +101,7 @@ export default function MedicationsContent({
                 {totalMissedAll} missed dose{totalMissedAll !== 1 ? "s" : ""} across ICU today
               </p>
               <div className="flex flex-wrap gap-2 mt-2">
-                {patients
+                {patientsList
                   .filter((p) => getMissedCount(p.id) > 0)
                   .map((p) => (
                     <button

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import AdminPatientSelector from "@/components/AdminPatientSelector";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -10,13 +11,11 @@ import {
 } from "@/components/ui/select";
 import { Download, ZoomIn, ZoomOut } from "lucide-react";
 import ICUMonitorWaveform from "@/components/ICUMonitorWaveform";
-import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { useAdminSelectedPatient } from "@/hooks/useAdminSelectedPatient";
 import { liveVitals } from "@/lib/mockData";
 
 export default function WaveformsPage() {
-  const { isPatient, user: patientUser, session } = usePatientAuth();
-  const displayName = isPatient && patientUser ? patientUser.name : "John Smith";
-  const displayId = isPatient && session ? session.patientId : "P001";
+  const { patientId, setPatientId, patientName } = useAdminSelectedPatient();
 
   const [heartRate, setHeartRate] = useState(liveVitals.heartRate);
   const [spO2, setSpO2] = useState(liveVitals.spO2);
@@ -29,7 +28,7 @@ export default function WaveformsPage() {
       setRespRate((rr) => Math.round(Math.min(30, Math.max(10, rr + (Math.random() - 0.5) * 0.5))));
     }, 2000);
     return () => clearInterval(id);
-  }, []);
+  }, [patientId]);
 
   return (
     <AppLayout>
@@ -38,10 +37,11 @@ export default function WaveformsPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Waveforms</h1>
             <p className="text-gray-500 text-sm mt-1">
-              Real-time physiological waveforms — {displayName} ({displayId})
+              Real-time physiological waveforms — {patientName} ({patientId})
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <AdminPatientSelector patientId={patientId} onPatientChange={setPatientId} />
             <Select defaultValue="1h">
               <SelectTrigger className="w-32">
                 <SelectValue />
@@ -64,6 +64,7 @@ export default function WaveformsPage() {
 
         <div className="grid md:grid-cols-2 gap-4">
           <ICUMonitorWaveform
+            key={`${patientId}-ecg`}
             type="ecg"
             label="ECG — Heart Rate"
             value={heartRate}
@@ -73,6 +74,7 @@ export default function WaveformsPage() {
             size="large"
           />
           <ICUMonitorWaveform
+            key={`${patientId}-spo2`}
             type="spo2"
             label="SpO₂ — Oxygen Level"
             value={spO2}
@@ -82,6 +84,7 @@ export default function WaveformsPage() {
             size="large"
           />
           <ICUMonitorWaveform
+            key={`${patientId}-resp`}
             type="resp"
             label="Respiration Rate"
             value={respRate}
@@ -91,6 +94,7 @@ export default function WaveformsPage() {
             size="large"
           />
           <ICUMonitorWaveform
+            key={`${patientId}-pulse`}
             type="pulse"
             label="Pulse Waveform"
             value={heartRate}

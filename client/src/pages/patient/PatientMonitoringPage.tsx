@@ -147,32 +147,6 @@ export default function PatientMonitoringPage() {
           </Card>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Physiological Waveforms</h2>
-            <Badge variant="outline" className="text-xs">
-              {patientName} ({patientId})
-            </Badge>
-          </div>
-          <ICUMonitorWaveform
-            type="ecg"
-            label="ECG — Heart Rate"
-            value={heartRate}
-            unit="bpm"
-            heartRate={heartRate}
-            color="#00ff41"
-            size="large"
-          />
-          <ICUMonitorWaveform
-            type="spo2"
-            label="SpO₂ — Oxygen Saturation"
-            value={spO2}
-            unit="%"
-            heartRate={heartRate}
-            color="#38bdf8"
-            size="large"
-          />
-        </div>
       </div>
     </PatientLayout>
   );

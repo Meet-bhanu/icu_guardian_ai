@@ -47,6 +47,12 @@ function playAlertPattern(pattern: Array<{ frequency: number; delay: number; dur
   }
 }
 
+export function stopMedicationAlertVoice(): void {
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+}
+
 export function playMedicationAlert(patientName: string, medicationName: string) {
   try {
     playAlertPattern([

@@ -1,6 +1,16 @@
-import { doctors, familyContacts, patients } from "./mockData";
+import { doctors, familyContacts, patients as initialPatients } from "./mockData";
 
 export type MedicationAdminStatus = "not_given" | "given" | "missed";
+
+export interface Patient {
+  id: string;
+  name: string;
+  age: number;
+  gender: string;
+  bedNo: string;
+  doctor: string;
+  status: "Critical" | "Stable" | "Warning";
+}
 
 export interface PatientMedication {
   id: number;
@@ -8,6 +18,26 @@ export interface PatientMedication {
   dosage: string;
   frequency: string;
   time: string;
+}
+
+export function getPatientsList(): Patient[] {
+  if (typeof window === "undefined") return initialPatients as Patient[];
+  const stored = localStorage.getItem("icu-patients-list");
+  if (!stored) {
+    localStorage.setItem("icu-patients-list", JSON.stringify(initialPatients));
+    return initialPatients as Patient[];
+  }
+  try {
+    return JSON.parse(stored) as Patient[];
+  } catch {
+    return initialPatients as Patient[];
+  }
+}
+
+export function savePatientsList(list: Patient[]): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("icu-patients-list", JSON.stringify(list));
+  }
 }
 
 const baseMedications: PatientMedication[] = [
@@ -30,7 +60,7 @@ const patientFamilyMap: Record<string, typeof familyContacts> = {
 };
 
 export function getPatientById(patientId: string) {
-  return patients.find((p) => p.id === patientId) ?? null;
+  return getPatientsList().find((p) => p.id === patientId) ?? null;
 }
 
 export function getMedicationsForPatient(patientId: string): PatientMedication[] {

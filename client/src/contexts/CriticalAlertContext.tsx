@@ -49,7 +49,7 @@ export function CriticalAlertProvider({ children }: { children: ReactNode }) {
     const tick = () => {
       const elapsed = Date.now() - activeAlert.triggeredAt;
       setElapsedMs(elapsed);
-      setCanAcknowledge(elapsed >= CRITICAL_ALARM_MIN_DURATION_MS);
+      setCanAcknowledge(true); // Always can acknowledge instantly
     };
 
     tick();
@@ -74,13 +74,12 @@ export function CriticalAlertProvider({ children }: { children: ReactNode }) {
 
     toast.error("CODE BLUE — Patient Critical", {
       description: `${alert.patientName} (${alert.patientId}): ${alert.reasons[0]}`,
-      duration: CRITICAL_ALARM_MIN_DURATION_MS,
+      duration: 10000, // Show Toast for 10s
     });
   }, [activeAlert]);
 
   const acknowledgeAlert = useCallback(() => {
     if (!activeAlert) return;
-    if (Date.now() - activeAlert.triggeredAt < CRITICAL_ALARM_MIN_DURATION_MS) return;
     stopCriticalPatientAlarm();
     setActiveAlert(null);
     lastTriggerKeyRef.current = "";
