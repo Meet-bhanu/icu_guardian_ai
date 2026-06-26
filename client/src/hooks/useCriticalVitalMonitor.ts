@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCriticalAlert } from "@/contexts/CriticalAlertContext";
 import {
   detectWorseningCondition,
@@ -22,9 +22,24 @@ export function useCriticalVitalMonitor({
   const { triggerCriticalAlert, activeAlert } = useCriticalAlert();
   const previousVitalsRef = useRef<PatientVitals | null>(null);
   const lastAlertAtRef = useRef<number>(0);
+  const [codeBlueEnabled, setCodeBlueEnabled] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("icu-enable-code-blue") === "true"
+  );
 
   useEffect(() => {
-    if (!enabled) return;
+    const checkState = () => {
+      setCodeBlueEnabled(typeof window !== "undefined" && localStorage.getItem("icu-enable-code-blue") === "true");
+    };
+    window.addEventListener("storage", checkState);
+    window.addEventListener("icu-code-blue-toggle", checkState);
+    return () => {
+      window.removeEventListener("storage", checkState);
+      window.removeEventListener("icu-code-blue-toggle", checkState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enabled || !codeBlueEnabled) return;
 
     const evaluation = evaluatePatientVitals(vitals);
     const worsening = previousVitalsRef.current
