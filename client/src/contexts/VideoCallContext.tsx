@@ -35,6 +35,8 @@ interface VideoCallContextProps {
 }
 
 const STORAGE_KEY = "icu-active-call";
+const SIGNAL_CHANNEL = "icu-call-signal";
+const RING_TIMEOUT_MS = 30000; // auto-end an unanswered call after 30s
 const VideoCallContext = createContext<VideoCallContextProps | null>(null);
 
 // Audio synthesizer for call sounds using Web Audio API
@@ -179,16 +181,48 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
+  const broadcastRef = useRef<BroadcastChannel | null>(null);
+  const notificationRef = useRef<Notification | null>(null);
 
-  // Sync state helpers
-  const saveCallState = (newState: CallState | null) => {
+  // --- Browser notification helpers (so the other device is alerted to pick up) ---
+  const ensureNotificationPermission = useCallback(async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return false;
+    if (Notification.permission === "granted") return true;
+    if (Notification.permission === "denied") return false;
+    try {
+      return (await Notification.requestPermission()) === "granted";
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const closeNotification = useCallback(() => {
+    try {
+      notificationRef.current?.close();
+    } catch {}
+    notificationRef.current = null;
+  }, []);
+
+  // --- Sync state helpers (persist + broadcast to the other side) ---
+  // Apply a state locally without rebroadcasting (used when receiving signals).
+  const applyCallState = useCallback((newState: CallState | null) => {
     if (newState) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
     setCall(newState);
-  };
+  }, []);
+
+  const saveCallState = useCallback(
+    (newState: CallState | null) => {
+      applyCallState(newState);
+      try {
+        broadcastRef.current?.postMessage(newState);
+      } catch {}
+    },
+    [applyCallState],
+  );
 
   // Stop media tracks
   const stopLocalStream = useCallback(() => {
@@ -275,8 +309,15 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isMuted, isVideoMuted]);
 
-  // Local storage changes (signaling server simulation)
+  // Signaling: BroadcastChannel (primary) + localStorage `storage` events (fallback)
   useEffect(() => {
+    let channel: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      channel = new BroadcastChannel(SIGNAL_CHANNEL);
+      channel.onmessage = (e) => applyCallState((e.data as CallState | null) ?? null);
+      broadcastRef.current = channel;
+    }
+
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) {
         const val = e.newValue ? (JSON.parse(e.newValue) as CallState) : null;
@@ -284,7 +325,17 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       }
     };
     window.addEventListener("storage", handleStorageChange);
-    
+
+    // Best-effort: ask for notification permission so incoming calls can alert
+    // the user even when this tab isn't focused. Browsers require a gesture, so
+    // also retry on the first interaction.
+    void ensureNotificationPermission();
+    const onFirstInteract = () => {
+      void ensureNotificationPermission();
+      window.removeEventListener("pointerdown", onFirstInteract);
+    };
+    window.addEventListener("pointerdown", onFirstInteract);
+
     // Check initial state
     const initial = localStorage.getItem(STORAGE_KEY);
     if (initial) {
@@ -293,8 +344,13 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       } catch {}
     }
 
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("pointerdown", onFirstInteract);
+      channel?.close();
+      broadcastRef.current = null;
+    };
+  }, [applyCallState, ensureNotificationPermission]);
 
   // Manage Sound Effects based on Call Status
   useEffect(() => {
@@ -306,30 +362,37 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     }
 
     const currentPatientId = isPatient ? session?.patientId : null;
+    const amCaller =
+      (call.caller === "admin" && !isPatient) || (call.caller === "patient" && isPatient);
+    const amCallee =
+      (call.caller === "admin" && isPatient && call.patientId === currentPatientId) ||
+      (call.caller === "patient" && !isPatient);
+    const isRingingPhase = call.status === "calling" || call.status === "ringing";
 
-    if (call.status === "calling") {
-      if (call.caller === "admin" && !isPatient) {
-        // Outgoing call from admin
+    let timeoutId: number | undefined;
+    let cleanupId: number | undefined;
+
+    if (isRingingPhase) {
+      if (amCaller) {
+        // Outgoing: play ringback, warm up the camera, and give up if unanswered
         sounds.playRingback();
         startLocalStream();
-      } else if (call.caller === "admin" && isPatient && call.patientId === currentPatientId) {
-        // Incoming call to patient
-        sounds.playRingtone();
-      } else if (call.caller === "patient" && isPatient) {
-        // Outgoing call from patient
-        sounds.playRingback();
-        startLocalStream();
-      } else if (call.caller === "patient" && !isPatient) {
-        // Incoming call to admin
+        timeoutId = window.setTimeout(() => {
+          saveCallState({ ...call, status: "ended" });
+          toast.error("No answer");
+        }, RING_TIMEOUT_MS);
+      } else if (amCallee) {
+        // Incoming: ring the device (notification handled in a dedicated effect)
         sounds.playRingtone();
       }
     } else if (call.status === "connected") {
       sounds.stop();
+      closeNotification();
       if (!localStream) {
         sounds.playConnect();
         startLocalStream();
       }
-      
+
       // Simulate remote stream for local testing, or capture from local webcam as remote placeholder
       if (!remoteStream) {
         navigator.mediaDevices.getUserMedia({ video: true, audio: false })
@@ -338,17 +401,29 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       }
     } else if (call.status === "ended") {
       sounds.playDisconnect();
-      const id = setTimeout(() => {
+      closeNotification();
+      cleanupId = window.setTimeout(() => {
         saveCallState(null);
       }, 1000);
-      return () => clearTimeout(id);
     }
-  }, [call, isPatient, session?.patientId, startLocalStream, stopLocalStream, stopRemoteStream]);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (cleanupId) clearTimeout(cleanupId);
+    };
+  }, [call, isPatient, session?.patientId, startLocalStream, stopLocalStream, stopRemoteStream, saveCallState, closeNotification]);
 
   // Methods
   const startCall = async (patientId: string) => {
-    if (call) return;
-    
+    // Guard: don't start a second call while one is already active
+    if (call && call.status !== "ended") {
+      toast.error("A call is already in progress");
+      return;
+    }
+
+    // Request notification permission up-front (this is a user gesture)
+    void ensureNotificationPermission();
+
     const patient = getPatientById(patientId);
     const patientName = patient?.name ?? "Patient";
 
@@ -369,14 +444,16 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   };
 
   const acceptCall = async () => {
-    if (!call) return;
-    
+    // Guard: only an unanswered, incoming call can be accepted
+    if (!call || (call.status !== "calling" && call.status !== "ringing")) return;
+
+    closeNotification();
     const updatedCall: CallState = {
       ...call,
       status: "connected",
       timestamp: Date.now(),
     };
-    
+
     saveCallState(updatedCall);
     sounds.playConnect();
     toast.success("Call connected");
@@ -384,12 +461,13 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
   const declineCall = () => {
     if (!call) return;
-    
+
+    closeNotification();
     const updatedCall: CallState = {
       ...call,
       status: "ended",
     };
-    
+
     saveCallState(updatedCall);
     toast.error("Call declined");
   };
@@ -448,17 +526,55 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     saveCallState(updatedCall);
   };
 
-  const isIncoming = call !== null && call.status === "calling" && (
-    (call.caller === "admin" && isPatient && call.patientId === session?.patientId) ||
-    (call.caller === "patient" && !isPatient)
+  const isRingingPhase = call !== null && (call.status === "calling" || call.status === "ringing");
+
+  const isIncoming = isRingingPhase && (
+    (call!.caller === "admin" && isPatient && call!.patientId === session?.patientId) ||
+    (call!.caller === "patient" && !isPatient)
   );
 
-  const isOutgoing = call !== null && call.status === "calling" && (
-    (call.caller === "admin" && !isPatient) ||
-    (call.caller === "patient" && isPatient)
+  const isOutgoing = isRingingPhase && (
+    (call!.caller === "admin" && !isPatient) ||
+    (call!.caller === "patient" && isPatient)
   );
 
   const isConnected = call !== null && call.status === "connected";
+
+  // Acknowledge an incoming call so the caller sees "Ringing…" instead of "Calling…"
+  useEffect(() => {
+    if (call && call.status === "calling" && isIncoming) {
+      saveCallState({ ...call, status: "ringing" });
+    }
+  }, [call, isIncoming, saveCallState]);
+
+  // Fire a browser notification on the callee's device for an incoming call
+  useEffect(() => {
+    if (!isIncoming || !call) {
+      closeNotification();
+      return;
+    }
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+    const callerLabel =
+      call.caller === "admin"
+        ? "ICU Supervisor (Dr. Sarah Chen)"
+        : (getPatientById(call.patientId)?.name ?? call.patientName);
+    try {
+      closeNotification();
+      const n = new Notification("Incoming video call", {
+        body: `${callerLabel} is calling — open the app to pick up`,
+        tag: "icu-incoming-call",
+        requireInteraction: true,
+      });
+      n.onclick = () => {
+        window.focus();
+        n.close();
+      };
+      notificationRef.current = n;
+    } catch {}
+
+    return () => closeNotification();
+  }, [isIncoming, call?.timestamp, call?.patientId, closeNotification]);
 
   return (
     <VideoCallContext.Provider

@@ -236,7 +236,7 @@ export default function VideoCallWidget() {
           </div>
 
           <h3 className="text-sm font-semibold mt-4 tracking-wide text-center">
-            Calling Patient...
+            {call.status === "ringing" ? "Ringing\u2026" : "Calling\u2026"}
           </h3>
           <p className="text-slate-400 text-xs mt-1 text-center font-medium">
             {oppositeName}
