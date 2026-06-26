@@ -11,8 +11,20 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Bell, AlertTriangle, Palette } from "lucide-react";
+import { useState } from "react";
 
 export default function SettingsPage() {
+  const [codeBlueEnabled, setCodeBlueEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("icu-enable-code-blue") === "true";
+  });
+
+  const handleToggleCodeBlue = (checked: boolean) => {
+    localStorage.setItem("icu-enable-code-blue", checked ? "true" : "false");
+    setCodeBlueEnabled(checked);
+    window.dispatchEvent(new Event("icu-code-blue-toggle"));
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -29,6 +41,20 @@ export default function SettingsPage() {
               <h2 className="text-lg font-semibold text-gray-900">Notification Settings</h2>
             </div>
             <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-semibold text-red-650 flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-550"></span>
+                    </span>
+                    Code Blue Vitals Alarm
+                  </Label>
+                  <p className="text-xs text-gray-500 mt-0.5 font-medium">Activate hospital-wide voice alarms and siren overlays for critical vital conditions</p>
+                </div>
+                <Switch checked={codeBlueEnabled} onCheckedChange={handleToggleCodeBlue} />
+              </div>
+              <Separator />
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm font-medium">Critical Alerts</Label>

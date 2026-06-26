@@ -99,6 +99,7 @@ export default function LiveMonitoringPage() {
           <div className="lg:col-span-2 space-y-4">
             <LiveCameraFeed
               key={patientId}
+              patientId={patientId}
               label={`${bedNo} — Bed Monitoring`}
               autoStart
               patientName={patientName}

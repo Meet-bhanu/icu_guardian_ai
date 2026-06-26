@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CameraOff, RefreshCw, TriangleAlert, UserCheck, UserX } from "lucide-react";
+import { Camera, CameraOff, RefreshCw, TriangleAlert, UserCheck, UserX, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { playMissingPatientAlert } from "@/lib/medicationAlerts";
 import { toast } from "sonner";
+import { useVideoCall } from "@/contexts/VideoCallContext";
+import { usePatientAuth } from "@/hooks/usePatientAuth";
 
 interface LiveCameraFeedProps {
   className?: string;
   label?: string;
   autoStart?: boolean;
   patientName?: string;
+  patientId?: string;
   missingThresholdMs?: number;
   onPresenceChange?: (isDetected: boolean) => void;
 }
@@ -20,6 +23,7 @@ export default function LiveCameraFeed({
   label = "Patient Camera",
   autoStart = true,
   patientName = "Patient",
+  patientId,
   missingThresholdMs = 15000,
   onPresenceChange,
 }: LiveCameraFeedProps) {
@@ -35,6 +39,20 @@ export default function LiveCameraFeed({
 
   const bodyDetected = active && faceDetected && !simulateBodyAbsence;
   const lastBodyDetectedRef = useRef(true);
+
+  const { call, startCall } = useVideoCall();
+  const { isPatient, session } = usePatientAuth();
+
+  const handleCallClick = () => {
+    if (isPatient) {
+      const pId = session?.patientId ?? "P001";
+      startCall(pId);
+    } else if (patientId) {
+      startCall(patientId);
+    } else {
+      startCall("P001");
+    }
+  };
 
   const updatePresence = useCallback(
     (detected: boolean) => {
@@ -281,6 +299,16 @@ export default function LiveCameraFeed({
       </div>
 
       <div className="absolute bottom-3 right-3 flex gap-2 z-30">
+        {!call && (
+          <Button
+            size="sm"
+            className="h-8 bg-emerald-600 hover:bg-emerald-750 text-white font-semibold flex items-center border-0 gap-1.5 transition-colors"
+            onClick={handleCallClick}
+          >
+            <Phone className="w-3.5 h-3.5 animate-pulse" />
+            {isPatient ? "Call Doctor" : "Video Call"}
+          </Button>
+        )}
         {active && (
           <Button
             size="sm"

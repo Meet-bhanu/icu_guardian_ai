@@ -80,6 +80,7 @@ export default function PatientMonitoringPage() {
           <div className="lg:col-span-2 space-y-4">
             <Card className="overflow-hidden p-0">
               <LiveCameraFeed
+                patientId={patientId}
                 label={`${session?.bedNo ?? "ICU-01"} — Bed Monitoring`}
                 patientName={patientName}
                 onPresenceChange={setFaceDetected}

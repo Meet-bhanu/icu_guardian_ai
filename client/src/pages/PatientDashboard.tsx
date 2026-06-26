@@ -153,7 +153,7 @@ export default function PatientDashboard() {
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">Live Camera Preview</h2>
             </div>
-            <LiveCameraFeed autoStart label={`${session?.bedNo ?? "ICU-01"} — Bed View`} />
+            <LiveCameraFeed autoStart patientId={patientId} label={`${session?.bedNo ?? "ICU-01"} — Bed View`} />
           </Card>
         </div>
 
