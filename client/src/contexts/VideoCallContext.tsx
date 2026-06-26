@@ -1,19 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 import { getPatientById } from "@/lib/patientData";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { trpc } from "@/lib/trpc";
+import { getCallSocketToken, useCallSocket } from "@/hooks/useCallSocket";
+import type { CallPayload, CallSocketEvent } from "../../../shared/calls";
 
-export interface CallState {
-  patientId: string;
-  patientName: string;
-  status: "idle" | "calling" | "ringing" | "connected" | "ended";
-  caller: "admin" | "patient";
-  adminMuted: boolean;
-  patientMuted: boolean;
-  adminVideoMuted: boolean;
-  patientVideoMuted: boolean;
-  timestamp: number;
-}
+export type CallState = CallPayload;
 
 interface VideoCallContextProps {
   call: CallState | null;
@@ -24,7 +18,7 @@ interface VideoCallContextProps {
   isIncoming: boolean;
   isOutgoing: boolean;
   isConnected: boolean;
-  micVolume: number; // 0 to 100 representing mic activity
+  micVolume: number;
   analyserRef: React.MutableRefObject<AnalyserNode | null>;
   startCall: (patientId: string) => Promise<void>;
   acceptCall: () => Promise<void>;
@@ -34,7 +28,6 @@ interface VideoCallContextProps {
   toggleVideoMute: () => void;
 }
 
-const STORAGE_KEY = "icu-active-call";
 const VideoCallContext = createContext<VideoCallContextProps | null>(null);
 
 // Audio synthesizer for call sounds using Web Audio API
@@ -61,7 +54,7 @@ class CallSoundSynthesizer {
       const osc = this.audioCtx.createOscillator();
       const gain = this.audioCtx.createGain();
 
-      osc.frequency.setValueAtTime(440, this.audioCtx.currentTime); // Standard ringback
+      osc.frequency.setValueAtTime(440, this.audioCtx.currentTime);
       osc.type = "sine";
 
       gain.gain.setValueAtTime(0, this.audioCtx.currentTime);
@@ -76,7 +69,6 @@ class CallSoundSynthesizer {
       osc.stop(this.audioCtx.currentTime + 1.4);
     };
 
-    // Play every 3 seconds
     playBeep();
     this.intervalId = window.setInterval(playBeep, 3000);
   }
@@ -88,14 +80,13 @@ class CallSoundSynthesizer {
 
     const playRing = () => {
       if (!this.audioCtx) return;
-      // High-low dual frequency ring
       const osc1 = this.audioCtx.createOscillator();
       const osc2 = this.audioCtx.createOscillator();
       const gain = this.audioCtx.createGain();
 
       osc1.frequency.setValueAtTime(853, this.audioCtx.currentTime);
       osc2.frequency.setValueAtTime(960, this.audioCtx.currentTime);
-      
+
       gain.gain.setValueAtTime(0, this.audioCtx.currentTime);
       gain.gain.linearRampToValueAtTime(0.15, this.audioCtx.currentTime + 0.05);
       gain.gain.linearRampToValueAtTime(0.15, this.audioCtx.currentTime + 0.8);
@@ -167,8 +158,45 @@ class CallSoundSynthesizer {
 
 const sounds = new CallSoundSynthesizer();
 
+function applySocketEvent(
+  event: CallSocketEvent,
+  setCall: React.Dispatch<React.SetStateAction<CallState | null>>,
+  isPatient: boolean,
+  isAdmin: boolean,
+  patientId: string | undefined
+) {
+  switch (event.type) {
+    case "call-request":
+      setCall(event.call);
+      break;
+    case "call-accepted":
+    case "call-declined":
+    case "call-ended":
+    case "call-updated":
+      setCall(event.call.status === "ended" ? event.call : event.call);
+      break;
+    case "pending-calls": {
+      const incoming = event.calls.find(
+        c => c.status === "calling" && c.caller === "patient"
+      );
+      if (incoming && isAdmin) {
+        setCall(incoming);
+      }
+      break;
+    }
+  }
+
+  if (event.type === "call-request" && isAdmin && event.call.caller === "patient") {
+    toast.info(`Incoming call from ${event.call.patientName}`);
+  }
+}
+
 export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const { isPatient, session } = usePatientAuth();
+  const [location] = useLocation();
+  const [isAdmin, setIsAdmin] = useState(
+    () => typeof window !== "undefined" && sessionStorage.getItem("icu-admin-logged-in") === "true"
+  );
   const [call, setCall] = useState<CallState | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -176,21 +204,35 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [micVolume, setMicVolume] = useState(0);
 
+  const initiateMutation = trpc.calls.initiate.useMutation();
+  const acceptMutation = trpc.calls.accept.useMutation();
+  const declineMutation = trpc.calls.decline.useMutation();
+  const endMutation = trpc.calls.end.useMutation();
+
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
 
-  // Sync state helpers
-  const saveCallState = (newState: CallState | null) => {
-    if (newState) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-    setCall(newState);
-  };
+  useEffect(() => {
+    const checkAdmin = () => {
+      setIsAdmin(sessionStorage.getItem("icu-admin-logged-in") === "true");
+    };
+    checkAdmin();
+    window.addEventListener("focus", checkAdmin);
+    return () => window.removeEventListener("focus", checkAdmin);
+  }, [location]);
 
-  // Stop media tracks
+  const socketToken = getCallSocketToken(isPatient, session?.patientId, isAdmin);
+
+  const handleSocketEvent = useCallback(
+    (event: CallSocketEvent) => {
+      applySocketEvent(event, setCall, isPatient, isAdmin, session?.patientId);
+    },
+    [isPatient, isAdmin, session?.patientId]
+  );
+
+  useCallSocket(socketToken, handleSocketEvent);
+
   const stopLocalStream = useCallback(() => {
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
@@ -215,7 +257,6 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     }
   }, [remoteStream]);
 
-  // Start local camera & microphone
   const startLocalStream = useCallback(async (videoEnabled = true, audioEnabled = true) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -225,7 +266,6 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
       setLocalStream(stream);
 
-      // Set initial mute states
       stream.getAudioTracks().forEach(track => {
         track.enabled = !isMuted;
       });
@@ -233,7 +273,6 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         track.enabled = !isVideoMuted;
       });
 
-      // Initialize real-time audio visualizer analyzer
       if (audioEnabled) {
         try {
           const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -250,14 +289,13 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
           const checkVolume = () => {
             if (!analyserRef.current) return;
             analyserRef.current.getByteFrequencyData(dataArray);
-            
-            // Calculate average volume level
+
             let sum = 0;
             for (let i = 0; i < dataArray.length; i++) {
               sum += dataArray[i];
             }
             const average = sum / dataArray.length;
-            setMicVolume(Math.min(100, Math.round((average / 255) * 100 * 2.5))); // Amplified for display
+            setMicVolume(Math.min(100, Math.round((average / 255) * 100 * 2.5)));
 
             animationFrameIdRef.current = requestAnimationFrame(checkVolume);
           };
@@ -270,33 +308,10 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       return stream;
     } catch (err) {
       console.warn("Failed to capture local media stream, using fallback:", err);
-      // Fallback: create an empty stream or return null
       return null;
     }
   }, [isMuted, isVideoMuted]);
 
-  // Local storage changes (signaling server simulation)
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) {
-        const val = e.newValue ? (JSON.parse(e.newValue) as CallState) : null;
-        setCall(val);
-      }
-    };
-    window.addEventListener("storage", handleStorageChange);
-    
-    // Check initial state
-    const initial = localStorage.getItem(STORAGE_KEY);
-    if (initial) {
-      try {
-        setCall(JSON.parse(initial));
-      } catch {}
-    }
-
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
-
-  // Manage Sound Effects based on Call Status
   useEffect(() => {
     if (!call) {
       sounds.stop();
@@ -305,22 +320,18 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const currentPatientId = isPatient ? session?.patientId : null;
+    const currentPatientId = isPatient ? session?.patientId?.toUpperCase() : null;
 
     if (call.status === "calling") {
-      if (call.caller === "admin" && !isPatient) {
-        // Outgoing call from admin
+      if (call.caller === "admin" && isAdmin) {
         sounds.playRingback();
         startLocalStream();
       } else if (call.caller === "admin" && isPatient && call.patientId === currentPatientId) {
-        // Incoming call to patient
         sounds.playRingtone();
-      } else if (call.caller === "patient" && isPatient) {
-        // Outgoing call from patient
+      } else if (call.caller === "patient" && isPatient && call.patientId === currentPatientId) {
         sounds.playRingback();
         startLocalStream();
-      } else if (call.caller === "patient" && !isPatient) {
-        // Incoming call to admin
+      } else if (call.caller === "patient" && isAdmin) {
         sounds.playRingtone();
       }
     } else if (call.status === "connected") {
@@ -329,8 +340,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         sounds.playConnect();
         startLocalStream();
       }
-      
-      // Simulate remote stream for local testing, or capture from local webcam as remote placeholder
+
       if (!remoteStream) {
         navigator.mediaDevices.getUserMedia({ video: true, audio: false })
           .then(stream => setRemoteStream(stream))
@@ -339,78 +349,78 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     } else if (call.status === "ended") {
       sounds.playDisconnect();
       const id = setTimeout(() => {
-        saveCallState(null);
+        setCall(null);
       }, 1000);
       return () => clearTimeout(id);
     }
-  }, [call, isPatient, session?.patientId, startLocalStream, stopLocalStream, stopRemoteStream]);
+  }, [call, isPatient, isAdmin, session?.patientId, startLocalStream, stopLocalStream, stopRemoteStream, localStream, remoteStream]);
 
-  // Methods
   const startCall = async (patientId: string) => {
     if (call) return;
-    
+
     const patient = getPatientById(patientId);
     const patientName = patient?.name ?? "Patient";
+    const caller = isPatient ? "patient" as const : "admin" as const;
 
-    const newCall: CallState = {
-      patientId,
-      patientName,
-      status: "calling",
-      caller: isPatient ? "patient" : "admin",
-      adminMuted: false,
-      patientMuted: false,
-      adminVideoMuted: false,
-      patientVideoMuted: false,
-      timestamp: Date.now(),
-    };
-
-    saveCallState(newCall);
-    toast.info(`Calling ${patientName}...`);
+    try {
+      const result = await initiateMutation.mutateAsync({
+        patientId,
+        patientName,
+        caller,
+      });
+      setCall(result.call);
+      toast.info(`Calling ${patientName}...`);
+    } catch {
+      toast.error("Failed to start call. Please try again.");
+    }
   };
 
   const acceptCall = async () => {
     if (!call) return;
-    
-    const updatedCall: CallState = {
-      ...call,
-      status: "connected",
-      timestamp: Date.now(),
-    };
-    
-    saveCallState(updatedCall);
-    sounds.playConnect();
-    toast.success("Call connected");
+
+    try {
+      const result = await acceptMutation.mutateAsync({ patientId: call.patientId });
+      setCall(result.call);
+      sounds.playConnect();
+      toast.success("Call connected");
+    } catch {
+      toast.error("Failed to accept call");
+    }
   };
 
   const declineCall = () => {
     if (!call) return;
-    
-    const updatedCall: CallState = {
-      ...call,
-      status: "ended",
-    };
-    
-    saveCallState(updatedCall);
-    toast.error("Call declined");
+
+    declineMutation.mutate(
+      { patientId: call.patientId },
+      {
+        onSuccess: (result) => {
+          setCall(result.call);
+          toast.error("Call declined");
+        },
+      }
+    );
   };
 
   const endCall = () => {
     if (!call) return;
 
-    const updatedCall: CallState = {
-      ...call,
-      status: "ended",
-    };
-
-    saveCallState(updatedCall);
-    stopLocalStream();
-    stopRemoteStream();
-    toast.info("Call ended");
+    endMutation.mutate(
+      { patientId: call.patientId },
+      {
+        onSuccess: (result) => {
+          setCall(result.call);
+          stopLocalStream();
+          stopRemoteStream();
+          toast.info("Call ended");
+        },
+      }
+    );
   };
 
   const toggleMute = () => {
     if (!call) return;
-    
+
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
 
@@ -420,17 +430,16 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    const updatedCall: CallState = {
+    setCall({
       ...call,
       adminMuted: !isPatient ? nextMuted : call.adminMuted,
       patientMuted: isPatient ? nextMuted : call.patientMuted,
-    };
-    saveCallState(updatedCall);
+    });
   };
 
   const toggleVideoMute = () => {
     if (!call) return;
-    
+
     const nextVideoMuted = !isVideoMuted;
     setIsVideoMuted(nextVideoMuted);
 
@@ -440,21 +449,20 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    const updatedCall: CallState = {
+    setCall({
       ...call,
       adminVideoMuted: !isPatient ? nextVideoMuted : call.adminVideoMuted,
       patientVideoMuted: isPatient ? nextVideoMuted : call.patientVideoMuted,
-    };
-    saveCallState(updatedCall);
+    });
   };
 
   const isIncoming = call !== null && call.status === "calling" && (
-    (call.caller === "admin" && isPatient && call.patientId === session?.patientId) ||
-    (call.caller === "patient" && !isPatient)
+    (call.caller === "admin" && isPatient && call.patientId === session?.patientId?.toUpperCase()) ||
+    (call.caller === "patient" && isAdmin)
   );
 
   const isOutgoing = call !== null && call.status === "calling" && (
-    (call.caller === "admin" && !isPatient) ||
+    (call.caller === "admin" && isAdmin) ||
     (call.caller === "patient" && isPatient)
   );
 

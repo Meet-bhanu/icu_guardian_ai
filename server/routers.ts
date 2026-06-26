@@ -3,7 +3,13 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import * as db from "./db";
+import {
+  initiatePatientCall,
+  initiateAdminCall,
+  acceptCall,
+  declineCall,
+  endCall,
+} from "./_core/socket";
 
 export const appRouter = router({
   system: systemRouter,
@@ -255,6 +261,52 @@ export const appRouter = router({
       .input(z.object({ patientId: z.number(), medicationId: z.number(), date: z.date() }))
       .query(async ({ ctx, input }) => {
         return await db.getComplianceByPatientAndMedication(input.patientId, input.medicationId, input.date);
+      }),
+  }),
+
+  // Real-time video call signaling (works across devices)
+  calls: router({
+    initiate: publicProcedure
+      .input(z.object({
+        patientId: z.string(),
+        patientName: z.string(),
+        caller: z.enum(["patient", "admin"]),
+      }))
+      .mutation(({ input }) => {
+        const call = input.caller === "patient"
+          ? initiatePatientCall(input.patientId, input.patientName)
+          : initiateAdminCall(input.patientId, input.patientName);
+        return { success: true, call };
+      }),
+
+    accept: publicProcedure
+      .input(z.object({ patientId: z.string() }))
+      .mutation(({ input }) => {
+        const call = acceptCall(input.patientId);
+        if (!call) {
+          throw new Error("No active call to accept");
+        }
+        return { success: true, call };
+      }),
+
+    decline: publicProcedure
+      .input(z.object({ patientId: z.string() }))
+      .mutation(({ input }) => {
+        const call = declineCall(input.patientId);
+        if (!call) {
+          throw new Error("No active call to decline");
+        }
+        return { success: true, call };
+      }),
+
+    end: publicProcedure
+      .input(z.object({ patientId: z.string() }))
+      .mutation(({ input }) => {
+        const call = endCall(input.patientId);
+        if (!call) {
+          throw new Error("No active call to end");
+        }
+        return { success: true, call };
       }),
   }),
 });
