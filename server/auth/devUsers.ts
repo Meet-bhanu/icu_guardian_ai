@@ -63,13 +63,12 @@ function toUser(account: DevAccount): User {
   };
 }
 
+/** Allow dev credentials when DB is down OR in dev mode without DATABASE_URL */
 export function findDevUser(
   username: string,
   password: string,
   expectedRole: string
 ): User | null {
-  if (!DEV_MODE) return null;
-
   const account = DEV_ACCOUNTS.find(
     (a) =>
       a.username.toLowerCase() === username.trim().toLowerCase() &&
@@ -82,7 +81,6 @@ export function findDevUser(
 }
 
 export function getDevUserById(id: number): User | null {
-  if (!DEV_MODE) return null;
   const account = DEV_ACCOUNTS.find((a) => a.id === id);
   return account ? toUser(account) : null;
 }

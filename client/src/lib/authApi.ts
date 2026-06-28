@@ -32,19 +32,32 @@ export type CreatedCredentials = {
 };
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    ...options,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers ?? {}),
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      ...options,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(options?.headers ?? {}),
+      },
+    });
+  } catch {
+    throw new Error("Cannot reach server. Run: npm run dev");
+  }
 
-  const data = await res.json().catch(() => ({}));
+  let data: Record<string, unknown> = {};
+  const text = await res.text();
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(res.ok ? "Invalid server response" : `Request failed (${res.status})`);
+    }
+  }
 
   if (!res.ok) {
-    throw new Error(data.error ?? `Request failed (${res.status})`);
+    throw new Error((data.error as string) ?? `Request failed (${res.status})`);
   }
 
   return data as T;

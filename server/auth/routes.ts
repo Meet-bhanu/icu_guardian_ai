@@ -23,6 +23,16 @@ function sanitizeUser(user: Awaited<ReturnType<typeof db.getUserById>>) {
 }
 
 export function registerAuthRoutes(app: Express) {
+  // GET /api/health — quick check that API + database are reachable
+  app.get("/api/health", async (_req: Request, res: Response) => {
+    try {
+      const database = await db.getDb();
+      res.json({ ok: true, database: Boolean(database) });
+    } catch {
+      res.json({ ok: true, database: false });
+    }
+  });
+
   // POST /api/login
   app.post("/api/login", async (req: Request, res: Response) => {
     try {
@@ -39,7 +49,16 @@ export function registerAuthRoutes(app: Express) {
         return;
       }
 
-      let user = await db.getUserByUsername(String(username).trim());
+      let user: Awaited<ReturnType<typeof db.getUserByUsername>> | undefined;
+      let dbUnavailable = false;
+
+      try {
+        user = await db.getUserByUsername(String(username).trim());
+      } catch (dbError) {
+        dbUnavailable = true;
+        console.warn("[Login] Database unavailable, using dev fallback:", dbError);
+        user = undefined;
+      }
 
       if (user?.passwordHash) {
         if (!user.isActive) {
@@ -62,17 +81,24 @@ export function registerAuthRoutes(app: Express) {
           return;
         }
 
-        await db.updateUser(user.id, { lastSignedIn: new Date() });
-      } else {
+        try {
+          await db.updateUser(user.id, { lastSignedIn: new Date() });
+        } catch {
+          // non-fatal
+        }
+      } else if (DEV_MODE || dbUnavailable) {
         user = findDevUser(String(username), String(password), expectedRole) ?? undefined;
         if (!user) {
           res.status(401).json({
-            error: DEV_MODE
-              ? "Invalid credentials. Use superadmin / SuperAdmin@2026 for Super Admin."
-              : "Invalid credentials",
+            error: "Invalid credentials. Use superadmin / SuperAdmin@2026 for Super Admin.",
           });
           return;
         }
+      } else {
+        res.status(401).json({
+          error: "Invalid credentials. Run npm run seed:demo to create demo users.",
+        });
+        return;
       }
 
       const token = await signAuthToken(
@@ -92,7 +118,7 @@ export function registerAuthRoutes(app: Express) {
         entityType: "user",
         entityId: user.id,
         ipAddress: getClientIp(req),
-      });
+      }).catch(() => undefined);
 
       res.json({ success: true, user: sanitizeUser(user) });
     } catch (error) {

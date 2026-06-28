@@ -4,7 +4,6 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
 import { z } from "zod";
-import * as db from "./db";
 import {
   initiatePatientCall,
   initiateAdminCall,
