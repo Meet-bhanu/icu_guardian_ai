@@ -20,7 +20,6 @@ import { toast } from "sonner";
 
 const ROLES = [
   { value: "admin", label: "Admin" },
-  { value: "doctor", label: "Doctor" },
   { value: "patient", label: "Patient" },
 ] as const;
 
@@ -29,7 +28,6 @@ const DEMO_CREDENTIALS: Record<
   { username: string; password: string }
 > = {
   admin: { username: "superadmin", password: "SuperAdmin@2026" },
-  doctor: { username: "doc0001", password: "Doctor@2026" },
   patient: { username: "icu0001", password: "Patient@2026" },
 };
 
@@ -50,7 +48,7 @@ export default function Login() {
     const u = params.get("username");
     const r = params.get("role");
     if (u) setUsername(u);
-    if (r === "patient" || r === "doctor" || r === "admin") setRole(r);
+    if (r === "patient" || r === "admin") setRole(r);
   }, []);
 
   if (loading) {
@@ -88,7 +86,7 @@ export default function Login() {
       const loggedIn = await login({
         username: submittedUsername,
         password: submittedPassword,
-        role: role as "admin" | "doctor" | "patient",
+        role: role as "admin" | "patient",
       });
       toast.success("Login successful");
       setLocation(getDashboardForRole(loggedIn.role));
@@ -125,7 +123,6 @@ export default function Login() {
             <p className="text-amber-700 text-[11px]">First time? Run <span className="font-mono font-bold">npm run seed:demo</span> in terminal.</p>
             <div className="space-y-1.5 text-amber-700">
               <p><span className="font-semibold">Admin:</span> <span className="font-mono font-bold text-amber-900">superadmin</span> / <span className="font-mono font-bold text-amber-900">SuperAdmin@2026</span></p>
-              <p><span className="font-semibold">Doctor:</span> <span className="font-mono font-bold text-amber-900">doc0001</span> / <span className="font-mono font-bold text-amber-900">Doctor@2026</span></p>
               <p><span className="font-semibold">Patient:</span> <span className="font-mono font-bold text-amber-900">icu0001</span> / <span className="font-mono font-bold text-amber-900">Patient@2026</span></p>
             </div>
             <Button

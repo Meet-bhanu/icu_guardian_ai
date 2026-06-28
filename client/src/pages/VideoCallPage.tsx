@@ -19,11 +19,18 @@ export default function VideoCallPage() {
   const [connected, setConnected] = useState(false);
   const [sessionTime, setSessionTime] = useState("00:00");
   const [logs, setLogs] = useState<Array<{ msg: string; type: string }>>([]);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [adminCamOn, setAdminCamOn] = useState(false);
+  const [adminMicOn, setAdminMicOn] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const adminSelfVideoRef = useRef<HTMLVideoElement>(null);
   const peerRef = useRef<any>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const adminSelfStreamRef = useRef<MediaStream | null>(null);
   const activeCallRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const sessionSecondsRef = useRef(0);
@@ -55,6 +62,12 @@ export default function VideoCallPage() {
         },
       ],
     },
+  };
+
+  const toast = (msg: string) => {
+    setToastMsg(msg);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3200);
   };
 
   const addLog = (msg: string, type: string = "") => {
@@ -108,8 +121,8 @@ export default function VideoCallPage() {
       });
 
       peer.on("call", (call: any) => {
-        addLog("Doctor is calling — answering...", "info");
-        setStatus("Doctor connecting...");
+        addLog("Admin is calling — answering...", "info");
+        setStatus("Admin connecting...");
 
         const answerWithStream = (stream: MediaStream) => {
           call.answer(stream);
@@ -117,7 +130,7 @@ export default function VideoCallPage() {
 
           call.on("stream", (remoteStream: MediaStream) => {
             addLog("Two-way connection established!", "ok");
-            setStatus("Doctor connected 🟢");
+            setStatus("Admin connected 🟢");
             setConnected(true);
             if (remoteVideoRef.current) {
               remoteVideoRef.current.srcObject = remoteStream;
@@ -125,9 +138,9 @@ export default function VideoCallPage() {
           });
 
           call.on("close", () => {
-            setStatus("Doctor disconnected");
+            setStatus("Admin disconnected");
             setConnected(false);
-            addLog("Doctor disconnected", "info");
+            addLog("Admin disconnected", "info");
           });
 
           call.on("error", (err: any) => {
@@ -139,7 +152,7 @@ export default function VideoCallPage() {
           answerWithStream(localStreamRef.current);
         } else {
           navigator.mediaDevices
-            .getUserMedia({ video: true, audio: true })
+            .getUserMedia({ video: { facingMode }, audio: true })
             .then((stream) => {
               localStreamRef.current = stream;
               setCamOn(true);
@@ -197,6 +210,7 @@ export default function VideoCallPage() {
         if (joinId) {
           setRoomId(joinId);
           addLog(`Room ID from link: ${joinId}`, "info");
+          toast("Room ID auto-filled — tap Connect");
         }
       });
 
@@ -213,7 +227,7 @@ export default function VideoCallPage() {
     if (!camOn) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: true,
         });
         localStreamRef.current = stream;
@@ -223,8 +237,10 @@ export default function VideoCallPage() {
         }
         addLog("Camera started (HD 720p)", "ok");
         startTimer();
+        toast("Camera on — share your Room ID with the admin");
       } catch (e: any) {
         addLog(`Camera denied: ${e.message}`, "err");
+        toast("Camera permission denied — please allow camera access");
       }
     } else {
       if (localStreamRef.current) {
@@ -247,16 +263,47 @@ export default function VideoCallPage() {
         t.enabled = !micOn;
       });
     }
+    toast(micOn ? "Mic muted 🔇" : "Mic on 🎤");
+  };
+
+  const flipCamera = async () => {
+    const newFacingMode = facingMode === "user" ? "environment" : "user";
+    setFacingMode(newFacingMode);
+    if (!camOn || !localStreamRef.current) {
+      toast("Start camera first");
+      return;
+    }
+    localStreamRef.current.getTracks().forEach((t) => t.stop());
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newFacingMode },
+        audio: true,
+      });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+      if (activeCallRef.current && activeCallRef.current.peerConnection) {
+        const sender = activeCallRef.current.peerConnection
+          .getSenders()
+          .find((s: any) => s.track && s.track.kind === "video");
+        if (sender) sender.replaceTrack(stream.getVideoTracks()[0]);
+      }
+      addLog(`Camera flipped to ${newFacingMode === "user" ? "front" : "back"}`, "info");
+      toast("Camera flipped");
+    } catch (e) {
+      toast("Could not flip camera");
+    }
   };
 
   const adminJoin = async () => {
     const targetRoomId = roomId.trim().toUpperCase();
     if (!targetRoomId) {
-      addLog("Enter a patient Room ID first", "err");
+      toast("Enter a patient Room ID first");
       return;
     }
     if (!peerRef.current) {
-      addLog("Still connecting — try again in a moment", "err");
+      toast("Still connecting — try again in a moment");
       return;
     }
 
@@ -265,23 +312,36 @@ export default function VideoCallPage() {
 
     let myStream: MediaStream | null = null;
     try {
-      myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      myStream = await navigator.mediaDevices.getUserMedia({
+        audio: adminMicOn,
+        video: adminCamOn,
+      });
+      if (adminCamOn) {
+        adminSelfStreamRef.current = myStream;
+        if (adminSelfVideoRef.current) {
+          adminSelfVideoRef.current.srcObject = myStream;
+        }
+      }
     } catch (e) {
-      myStream = new MediaStream();
+      myStream = null;
     }
 
     let call;
     try {
-      call = peerRef.current.call(targetRoomId, myStream);
+      call = myStream
+        ? peerRef.current.call(targetRoomId, myStream)
+        : peerRef.current.call(targetRoomId, new MediaStream());
     } catch (e: any) {
       addLog(`Could not call room ${targetRoomId}: ${e.message}`, "err");
       setStatus("Failed");
+      toast("Could not connect — check Room ID");
       return;
     }
 
     if (!call) {
       addLog("No call object — peer may be offline", "err");
       setStatus("Not found");
+      toast("Room not found — is patient online?");
       return;
     }
 
@@ -291,6 +351,7 @@ export default function VideoCallPage() {
       if (!remoteVideoRef.current?.srcObject) {
         addLog(`Timeout — no stream from ${targetRoomId}`, "err");
         setStatus("Timeout");
+        toast("No response — check Room ID or ask patient to start camera");
       }
     }, 15000);
 
@@ -302,6 +363,7 @@ export default function VideoCallPage() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
       }
+      toast(`Connected to patient ${targetRoomId} ✓`);
     });
 
     call.on("close", () => {
@@ -312,13 +374,55 @@ export default function VideoCallPage() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = null;
       }
+      toast("Patient disconnected");
     });
 
     call.on("error", (err: any) => {
       clearTimeout(timeout);
       addLog(`Call error: ${err}`, "err");
       setStatus("Error");
+      toast("Connection error");
     });
+  };
+
+  const adminToggleCam = async () => {
+    if (!adminCamOn) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: adminMicOn,
+        });
+        adminSelfStreamRef.current = stream;
+        if (adminSelfVideoRef.current) {
+          adminSelfVideoRef.current.srcObject = stream;
+        }
+        setAdminCamOn(true);
+        addLog("Admin camera on", "ok");
+        toast("Your camera on — patient can see you");
+      } catch (e) {
+        toast("Camera permission denied");
+      }
+    } else {
+      if (adminSelfStreamRef.current) {
+        adminSelfStreamRef.current.getTracks().forEach((t) => t.stop());
+        adminSelfStreamRef.current = null;
+      }
+      if (adminSelfVideoRef.current) {
+        adminSelfVideoRef.current.srcObject = null;
+      }
+      setAdminCamOn(false);
+      toast("Your camera off");
+    }
+  };
+
+  const adminToggleMic = () => {
+    setAdminMicOn(!adminMicOn);
+    if (adminSelfStreamRef.current) {
+      adminSelfStreamRef.current.getAudioTracks().forEach((t) => {
+        t.enabled = !adminMicOn;
+      });
+    }
+    toast(adminMicOn ? "Mic muted 🔇" : "Mic on 🎤");
   };
 
   const disconnect = () => {
@@ -330,8 +434,13 @@ export default function VideoCallPage() {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
     }
+    if (adminSelfStreamRef.current) {
+      adminSelfStreamRef.current.getTracks().forEach((t) => t.stop());
+      adminSelfStreamRef.current = null;
+    }
     setConnected(false);
     setCamOn(false);
+    setAdminCamOn(false);
     if (timerRef.current) clearInterval(timerRef.current);
     if (peerRef.current) {
       peerRef.current.destroy();
@@ -339,6 +448,7 @@ export default function VideoCallPage() {
     }
     setStatus("Disconnected");
     addLog("Disconnected", "info");
+    toast("Session ended");
   };
 
   const goBack = () => {
@@ -348,7 +458,7 @@ export default function VideoCallPage() {
 
   const copyToClipboard = (text: string) => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
+      navigator.clipboard.writeText(text).then(() => toast("Copied to clipboard ✓"));
     } else {
       const ta = document.createElement("textarea");
       ta.value = text;
@@ -358,10 +468,16 @@ export default function VideoCallPage() {
       ta.select();
       document.execCommand("copy");
       document.body.removeChild(ta);
+      toast("Copied ✓");
     }
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const joinId = params.get("join");
+    if (joinId && !role) {
+      toast("Shared room link detected — open Admin view to connect");
+    }
     return () => {
       disconnect();
     };
@@ -389,7 +505,7 @@ export default function VideoCallPage() {
               <div className="text-4xl mb-3">🏥</div>
               <h3 className="font-semibold text-gray-900 mb-2">Patient</h3>
               <p className="text-xs text-gray-600">
-                Share your live camera with your doctor anywhere in the world
+                Share your live camera with your admin anywhere in the world
               </p>
             </button>
             <button
@@ -400,7 +516,7 @@ export default function VideoCallPage() {
               className="bg-green-50 border-2 border-green-200 rounded-xl p-6 hover:bg-green-100 hover:border-green-300 transition-all cursor-pointer text-center"
             >
               <div className="text-4xl mb-3">👨‍⚕️</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Doctor / Admin</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">Admin</h3>
               <p className="text-xs text-gray-600">
                 Watch live patient feeds from any device, any location
               </p>
@@ -418,27 +534,34 @@ export default function VideoCallPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
+      {/* Toast */}
+      {showToast && (
+        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-green-50 border-2 border-green-200 rounded-lg px-6 py-3 text-sm text-gray-900 shadow-lg z-50">
+          {toastMsg}
+        </div>
+      )}
+
       {/* Top Bar */}
       <div className="bg-green-50 border-b-2 border-green-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
           <span className="font-semibold text-gray-900">
-            MedWatch · {role === "patient" ? "Patient" : "Admin / Doctor"}
+            MedWatch · {role === "patient" ? "Patient" : "Admin"}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`px-3 py-1 rounded-full text-xs font-medium ${
+            className={`px-3 py-1 rounded-full text-xs font-medium border ${
               connected
-                ? "bg-green-100 text-green-700 border border-green-300"
-                : "bg-gray-100 text-gray-600 border border-gray-300"
+                ? "bg-green-100 text-green-700 border-green-300"
+                : "bg-gray-100 text-gray-600 border-gray-300"
             }`}
           >
             {status}
           </span>
           <button
             onClick={goBack}
-            className="px-3 py-1 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+            className="px-3 py-1 rounded-lg text-sm border-2 border-green-200 text-gray-600 hover:bg-green-50 transition-colors"
           >
             ← Back
           </button>
@@ -455,6 +578,7 @@ export default function VideoCallPage() {
                 ? "Tap the camera button to start"
                 : "Enter a Room ID below to watch a patient live"}
             </p>
+            {role === "patient" && <small className="text-gray-500">Your admin will see this feed live</small>}
           </div>
         )}
         <video
@@ -481,25 +605,50 @@ export default function VideoCallPage() {
             </div>
           </div>
         )}
+        {/* PIP for patient - shows admin */}
+        {role === "patient" && connected && (
+          <div className="absolute bottom-3 right-3 w-24 h-20 rounded-lg overflow-hidden border-2 border-white/20 bg-gray-900">
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute bottom-1 left-2 text-[10px] text-white/70">Admin</div>
+          </div>
+        )}
+        {/* PIP for admin - shows self */}
+        {role === "admin" && adminCamOn && (
+          <div className="absolute bottom-3 right-3 w-24 h-20 rounded-lg overflow-hidden border-2 border-white/20 bg-gray-900">
+            <video
+              ref={adminSelfVideoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute bottom-1 left-2 text-[10px] text-white/70">You</div>
+          </div>
+        )}
       </div>
 
       {/* Controls */}
       <div className="bg-green-50 border-t-2 border-green-200 px-4 py-4">
         <div className="flex items-center justify-center gap-3 mb-4">
           <button
-            onClick={toggleMic}
+            onClick={role === "patient" ? toggleMic : adminToggleMic}
             className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-xl transition-all ${
-              micOn
+              (role === "patient" ? micOn : adminMicOn)
                 ? "bg-white border-green-300 text-gray-600"
                 : "bg-red-100 border-red-300 text-red-600"
             }`}
           >
-            {micOn ? "🎤" : "🔇"}
+            {role === "patient" ? (micOn ? "🎤" : "🔇") : adminMicOn ? "🎤" : "🔇"}
           </button>
           <button
-            onClick={toggleCamera}
+            onClick={role === "patient" ? toggleCamera : adminToggleCam}
             className={`w-14 h-14 rounded-full border-2 flex items-center justify-center text-2xl transition-all ${
-              camOn
+              (role === "patient" ? camOn : adminCamOn)
                 ? "bg-green-100 border-green-400 text-green-700"
                 : "bg-white border-green-300 text-gray-600"
             }`}
@@ -511,6 +660,23 @@ export default function VideoCallPage() {
             className="w-12 h-12 rounded-full border-2 bg-red-100 border-red-300 text-red-600 flex items-center justify-center text-xl transition-all hover:bg-red-200"
           >
             📵
+          </button>
+          {role === "patient" && (
+            <button
+              onClick={flipCamera}
+              className="w-12 h-12 rounded-full border-2 bg-white border-green-300 text-gray-600 flex items-center justify-center text-xl transition-all hover:bg-green-50"
+            >
+              🔄
+            </button>
+          )}
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}${window.location.pathname}?join=${roomId}`;
+              copyToClipboard(url);
+            }}
+            className="w-12 h-12 rounded-full border-2 bg-white border-green-300 text-gray-600 flex items-center justify-center text-xl transition-all hover:bg-green-50"
+          >
+            🔗
           </button>
         </div>
 
@@ -536,13 +702,13 @@ export default function VideoCallPage() {
           <div className="space-y-2">
             <div className="bg-green-100 border border-green-300 rounded-lg p-3">
               <div className="text-xs text-green-700 mb-1 flex items-center gap-2">
-                🔗 Share this link with your doctor to connect
+                🔗 Share this link with your admin to connect
               </div>
               <div
                 className="text-xs font-mono text-gray-700 bg-white border border-green-200 rounded px-3 py-2 cursor-pointer truncate"
                 onClick={() => copyToClipboard(`${window.location.origin}${window.location.pathname}?join=${roomId}`)}
               >
-                {window.location.origin}${window.location.pathname}?join={roomId}
+                {window.location.origin}{window.location.pathname}?join={roomId}
               </div>
             </div>
             <div className="flex gap-2">
@@ -559,6 +725,26 @@ export default function VideoCallPage() {
                 Copy
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Status Strip */}
+      <div className="bg-white border-t-2 border-green-200 px-4 py-2 flex gap-4 flex-wrap">
+        <div className="text-xs text-gray-500 flex items-center gap-1">
+          📡 Quality: <strong className="text-gray-700">{camOn || connected ? "HD 720p" : "—"}</strong>
+        </div>
+        {role === "patient" && (
+          <div className="text-xs text-gray-500 flex items-center gap-1">
+            👀 Viewers: <strong className="text-gray-700">{connected ? "1" : "0"}</strong>
+          </div>
+        )}
+        <div className="text-xs text-gray-500 flex items-center gap-1">
+          ⏱ Time: <strong className="text-gray-700">{sessionTime}</strong>
+        </div>
+        {role === "admin" && (
+          <div className="text-xs text-gray-500 flex items-center gap-1">
+            🔒 <strong className="text-gray-700">E2E Encrypted</strong>
           </div>
         )}
       </div>
