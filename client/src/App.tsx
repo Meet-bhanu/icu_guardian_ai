@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import RoleSelection from "./pages/RoleSelection";
 import DoctorDashboard from "./pages/DoctorDashboard";
+import DoctorLogin from "./pages/DoctorLogin";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Feedback from "./pages/Feedback";
 import FeedbackAnalytics from "./pages/dashboard/FeedbackAnalytics";
@@ -58,6 +59,7 @@ function Router() {
       <Route path={"/login"} component={Login} />
       <Route path={"/login/admin"}><LoginRedirect /></Route>
       <Route path={"/login/patient"}><LoginRedirect /></Route>
+      <Route path={"/login/doctor"} component={DoctorLogin} />
       <Route path={"/role-selection"} component={RoleSelection} />
       <Route path={"/video-call"} component={VideoCallPage} />
       <Route path={"/feedback"} component={Feedback} />

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 interface LoginLayoutProps {
   title: string;
   subtitle: string;
-  role: "admin" | "patient";
+  role: "admin" | "patient" | "doctor";
   imageGradient: string;
   imageLabel: string;
 }
@@ -107,6 +107,15 @@ export default function LoginLayout({
       setLocation("/patient/dashboard");
       return;
     }
+    
+    if (role === "doctor") {
+      sessionStorage.removeItem("icu-admin-logged-in");
+      sessionStorage.removeItem("icu-patient-session");
+      sessionStorage.setItem("icu-doctor-logged-in", "true");
+      setLocation("/doctor/dashboard");
+      return;
+    }
+    
     sessionStorage.removeItem("icu-patient-session");
     sessionStorage.setItem("icu-admin-logged-in", "true");
     setLocation("/dashboard");
@@ -125,6 +134,11 @@ export default function LoginLayout({
         bedNo: "ICU-01",
       });
       setLocation("/patient/dashboard");
+    } else if (role === "doctor") {
+      sessionStorage.removeItem("icu-admin-logged-in");
+      sessionStorage.removeItem("icu-patient-session");
+      sessionStorage.setItem("icu-doctor-logged-in", "true");
+      setLocation("/doctor/dashboard");
     } else {
       sessionStorage.setItem("icu-admin-logged-in", "true");
       setLocation("/dashboard");
@@ -205,6 +219,20 @@ export default function LoginLayout({
               </p>
             </div>
           )}
+          {role === "doctor" && (
+            <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200/60 text-xs space-y-1">
+              <p className="font-semibold text-amber-800 flex items-center gap-1">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                Doctor Demonstration Credentials:
+              </p>
+              <p className="text-amber-700 mt-1">
+                Email: <span className="font-mono font-bold select-all text-amber-900 bg-amber-100/50 px-1 py-0.5 rounded">doc0001@healthhalo.demo</span>
+              </p>
+              <p className="text-amber-700">
+                Password: <span className="font-mono font-bold select-all text-amber-900 bg-amber-100/50 px-1 py-0.5 rounded">Doctor@2026</span>
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
@@ -212,7 +240,13 @@ export default function LoginLayout({
               <Input
                 id="username"
                 type="email"
-                placeholder={role === "admin" ? "admin@healthhalo.com" : "p001@patient.healthhalo.com"}
+                placeholder={
+                  role === "admin" 
+                    ? "admin@healthhalo.com" 
+                    : role === "doctor" 
+                    ? "doc0001@healthhalo.demo"
+                    : "p001@patient.healthhalo.com"
+                }
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className={cn("h-11", emailError && "border-red-500 focus-visible:ring-red-400")}
@@ -327,12 +361,46 @@ export default function LoginLayout({
                 >
                   Click here
                 </button>
+                {" | "}
+                Doctor login?{" "}
+                <button
+                  onClick={() => setLocation("/login/doctor")}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  Click here
+                </button>
+              </>
+            ) : role === "doctor" ? (
+              <>
+                Admin login?{" "}
+                <button
+                  onClick={() => setLocation("/login/admin")}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  Click here
+                </button>
+                {" | "}
+                Patient login?{" "}
+                <button
+                  onClick={() => setLocation("/login/patient")}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  Click here
+                </button>
               </>
             ) : (
               <>
                 Admin login?{" "}
                 <button
                   onClick={() => setLocation("/login/admin")}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  Click here
+                </button>
+                {" | "}
+                Doctor login?{" "}
+                <button
+                  onClick={() => setLocation("/login/doctor")}
                   className="text-primary font-semibold hover:underline"
                 >
                   Click here
