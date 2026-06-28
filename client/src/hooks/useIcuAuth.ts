@@ -32,7 +32,7 @@ type IcuAuthState = {
 
 // Demo user mapping (temporary until Firestore is properly configured)
 const DEMO_USER_MAP: Record<string, { role: string; name: string }> = {
-  "superadmin@healthhalo.demo": { role: "super_admin", name: "Super Administrator" },
+  "superadmin@healthhalo.demo": { role: "admin", name: "Administrator" },
   "doc0001@healthhalo.demo": { role: "doctor", name: "Dr. John Smith" },
   "icu0001@healthhalo.demo": { role: "patient", name: "Jane Doe" },
 };

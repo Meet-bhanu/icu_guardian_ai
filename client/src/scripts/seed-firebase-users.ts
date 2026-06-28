@@ -20,8 +20,8 @@ const DEMO_USERS = [
   {
     username: "superadmin",
     password: "SuperAdmin@2026",
-    role: "super_admin",
-    name: "Super Administrator",
+    role: "admin",
+    name: "Administrator",
     email: "superadmin@healthhalo.demo",
     isActive: true,
     loginMethod: "email",

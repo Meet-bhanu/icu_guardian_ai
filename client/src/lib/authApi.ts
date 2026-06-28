@@ -20,7 +20,7 @@ export type SafeUser = {
 export type LoginCredentials = {
   username: string;
   password: string;
-  role: "super_admin" | "doctor" | "patient";
+  role: "admin" | "doctor" | "patient";
   rememberMe?: boolean;
 };
 
@@ -131,14 +131,14 @@ export async function getAuditLogsApi(): Promise<{ logs: unknown[] }> {
 }
 
 export function getDashboardForRole(role: string): string {
-  if (role === "super_admin" || role === "admin") return ROLE_DASHBOARD.super_admin;
+  if (role === "admin") return ROLE_DASHBOARD.super_admin;
   if (role === "doctor") return ROLE_DASHBOARD.doctor;
   if (role === "patient") return ROLE_DASHBOARD.patient;
   return "/login";
 }
 
 export function isAdminRole(role: string | undefined): boolean {
-  return role === "super_admin" || role === "admin";
+  return role === "admin";
 }
 
 export function canAccessRoute(role: string | undefined, path: string): boolean {
