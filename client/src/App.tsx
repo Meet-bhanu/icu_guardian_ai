@@ -48,6 +48,7 @@ import PatientPortalFamilyPage from "./pages/patient/PatientFamilyPage";
 import { VideoCallProvider } from "./contexts/VideoCallContext";
 import { CameraStreamProvider } from "./contexts/CameraStreamContext";
 import VideoCallWidget from "./components/VideoCallWidget";
+import VideoCallPage from "./pages/VideoCallPage";
 import { AuthRoute, LoginRedirect } from "./components/auth/AuthRoute";
 
 function Router() {
@@ -58,6 +59,7 @@ function Router() {
       <Route path={"/login/admin"}><LoginRedirect /></Route>
       <Route path={"/login/patient"}><LoginRedirect /></Route>
       <Route path={"/role-selection"} component={RoleSelection} />
+      <Route path={"/video-call"} component={VideoCallPage} />
       <Route path={"/feedback"} component={Feedback} />
 
       {/* Admin ICU Dashboard — super_admin / admin only */}
