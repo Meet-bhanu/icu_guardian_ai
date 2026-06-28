@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CameraOff, RefreshCw, TriangleAlert, UserCheck, UserX, Phone, Video, VideoOff } from "lucide-react";
+import { Camera, CameraOff, RefreshCw, TriangleAlert, UserCheck, UserX, Phone, Video, VideoOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useVideoCall } from "@/contexts/VideoCallContext";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
 import { useCameraStream } from "@/contexts/CameraStreamContext";
+import VideoCallPage from "@/pages/VideoCallPage";
 
 interface LiveCameraFeedProps {
   className?: string;
@@ -37,6 +38,7 @@ export default function LiveCameraFeed({
   const [timestamp, setTimestamp] = useState("");
   const [faceDetected, setFaceDetected] = useState(true);
   const [simulateBodyAbsence, setSimulateBodyAbsence] = useState(false);
+  const [showVideoCall, setShowVideoCall] = useState(false);
 
   const bodyDetected = active && faceDetected && !simulateBodyAbsence;
   const lastBodyDetectedRef = useRef(true);
@@ -46,14 +48,11 @@ export default function LiveCameraFeed({
   const { isBroadcasting, startBroadcast, stopBroadcast } = useCameraStream();
 
   const handleCallClick = () => {
-    if (isPatient) {
-      const pId = session?.patientId ?? "P001";
-      startCall(pId);
-    } else if (patientId) {
-      startCall(patientId);
-    } else {
-      startCall("P001");
-    }
+    setShowVideoCall(true);
+  };
+
+  const closeVideoCall = () => {
+    setShowVideoCall(false);
   };
 
   const updatePresence = useCallback(
@@ -318,14 +317,14 @@ export default function LiveCameraFeed({
       </div>
 
       <div className="absolute bottom-3 right-3 flex gap-2 z-30">
-        {!call && (
+        {!call && isPatient && (
           <Button
             size="sm"
-            className="h-8 bg-emerald-600 hover:bg-emerald-750 text-white font-semibold flex items-center border-0 gap-1.5 transition-colors"
+            className="h-8 bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center border-0 gap-1.5 transition-colors"
             onClick={handleCallClick}
           >
             <Phone className="w-3.5 h-3.5 animate-pulse" />
-            {isPatient ? "Call Doctor" : "Video Call"}
+            Start Video Call
           </Button>
         )}
         {active && (
@@ -371,6 +370,31 @@ export default function LiveCameraFeed({
           <RefreshCw className="w-3.5 h-3.5" />
         </Button>
       </div>
+
+      {/* Video Call Modal */}
+      {showVideoCall && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-green-50">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Video className="w-5 h-5 text-green-600" />
+                Patient Video Call
+              </h3>
+              <Button
+                onClick={closeVideoCall}
+                variant="ghost"
+                size="icon"
+                className="hover:bg-red-100 hover:text-red-600"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="h-[calc(90vh-60px)] overflow-auto">
+              <VideoCallPage />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
