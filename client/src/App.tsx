@@ -45,6 +45,7 @@ import PatientPortalFamilyPage from "./pages/patient/PatientFamilyPage";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Spinner } from "./components/ui/spinner";
 import { VideoCallProvider } from "./contexts/VideoCallContext";
+import { CameraStreamProvider } from "./contexts/CameraStreamContext";
 import VideoCallWidget from "./components/VideoCallWidget";
 
 interface ProtectedRouteProps {
@@ -145,11 +146,13 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <CriticalAlertProvider>
           <VideoCallProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-              <VideoCallWidget />
-            </TooltipProvider>
+            <CameraStreamProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+                <VideoCallWidget />
+              </TooltipProvider>
+            </CameraStreamProvider>
           </VideoCallProvider>
         </CriticalAlertProvider>
       </ThemeProvider>

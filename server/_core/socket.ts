@@ -10,6 +10,8 @@ const adminSockets = new Set<WebSocket>();
 const patientSockets = new Map<string, Set<WebSocket>>();
 const socketClients = new WeakMap<WebSocket, ClientInfo>();
 const activeCalls = new Map<string, CallPayload>();
+const socketIdMap = new WeakMap<WebSocket, string>();
+let socketIdCounter = 0;
 
 function send(ws: WebSocket, event: CallSocketEvent) {
   if (ws.readyState === WebSocket.OPEN) {
@@ -41,6 +43,8 @@ function sendPendingCallsToAdmin(ws: WebSocket) {
 
 function registerSocket(ws: WebSocket, client: ClientInfo) {
   socketClients.set(ws, client);
+  const socketId = `socket-${socketIdCounter++}`;
+  socketIdMap.set(ws, socketId);
 
   if (client.role === "admin") {
     adminSockets.add(ws);
@@ -171,6 +175,38 @@ export function getActiveCall(patientId: string): CallPayload | undefined {
   return activeCalls.get(patientId.toUpperCase());
 }
 
+// Camera streaming functions
+export function relayCameraOffer(patientId: string, offer: RTCSessionDescriptionInit, socketId: string) {
+  const normalizedId = patientId.toUpperCase();
+  broadcastToAdmins({ type: "camera-offer", patientId: normalizedId, offer, socketId });
+}
+
+export function relayCameraAnswer(patientId: string, answer: RTCSessionDescriptionInit, socketId: string) {
+  const normalizedId = patientId.toUpperCase();
+  broadcastToPatient(normalizedId, { type: "camera-answer", patientId: normalizedId, answer, socketId });
+}
+
+export function relayCameraIceCandidate(patientId: string, candidate: RTCIceCandidateInit, socketId: string) {
+  const normalizedId = patientId.toUpperCase();
+  const client = socketClients.get(Array.from(adminSockets).find(ws => socketIdMap.get(ws) === socketId) || Array.from(patientSockets.get(normalizedId) || []).find(ws => socketIdMap.get(ws) === socketId));
+  
+  if (client?.role === "admin") {
+    broadcastToPatient(normalizedId, { type: "camera-ice-candidate", patientId: normalizedId, candidate, socketId });
+  } else {
+    broadcastToAdmins({ type: "camera-ice-candidate", patientId: normalizedId, candidate, socketId });
+  }
+}
+
+export function notifyCameraStreamStarted(patientId: string) {
+  const normalizedId = patientId.toUpperCase();
+  broadcastToAdmins({ type: "camera-stream-started", patientId: normalizedId });
+}
+
+export function notifyCameraStreamStopped(patientId: string) {
+  const normalizedId = patientId.toUpperCase();
+  broadcastToAdmins({ type: "camera-stream-stopped", patientId: normalizedId });
+}
+
 /** Initialise WS server – called from `index.ts` */
 export function initWebSocketServer(httpServer: Server) {
   const wss = new WebSocketServer({ server: httpServer, path: "/ws/calls" });
@@ -194,6 +230,42 @@ export function initWebSocketServer(httpServer: Server) {
 
     ws.on("close", () => unregisterSocket(ws));
     ws.on("error", () => unregisterSocket(ws));
+
+    ws.on("message", (data) => {
+      try {
+        const event = JSON.parse(data.toString()) as CallSocketEvent;
+        const socketId = socketIdMap.get(ws);
+        if (!socketId) return;
+
+        switch (event.type) {
+          case "camera-offer":
+            if (parsed.role === "patient") {
+              relayCameraOffer(event.patientId, event.offer, socketId);
+            }
+            break;
+          case "camera-answer":
+            if (parsed.role === "admin") {
+              relayCameraAnswer(event.patientId, event.answer, socketId);
+            }
+            break;
+          case "camera-ice-candidate":
+            relayCameraIceCandidate(event.patientId, event.candidate, socketId);
+            break;
+          case "camera-stream-started":
+            if (parsed.role === "patient") {
+              notifyCameraStreamStarted(event.patientId);
+            }
+            break;
+          case "camera-stream-stopped":
+            if (parsed.role === "patient") {
+              notifyCameraStreamStopped(event.patientId);
+            }
+            break;
+        }
+      } catch (err) {
+        console.error("[WebSocket] Error handling message:", err);
+      }
+    });
   });
 
   console.log("[WebSocket] Call signaling server ready at /ws/calls");

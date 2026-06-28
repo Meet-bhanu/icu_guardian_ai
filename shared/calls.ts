@@ -19,7 +19,13 @@ export type CallSocketEvent =
   | { type: "call-declined"; call: CallPayload }
   | { type: "call-ended"; call: CallPayload }
   | { type: "call-updated"; call: CallPayload }
-  | { type: "pending-calls"; calls: CallPayload[] };
+  | { type: "pending-calls"; calls: CallPayload[] }
+  // Camera streaming events
+  | { type: "camera-offer"; patientId: string; offer: RTCSessionDescriptionInit; socketId: string }
+  | { type: "camera-answer"; patientId: string; answer: RTCSessionDescriptionInit; socketId: string }
+  | { type: "camera-ice-candidate"; patientId: string; candidate: RTCIceCandidateInit; socketId: string }
+  | { type: "camera-stream-started"; patientId: string }
+  | { type: "camera-stream-stopped"; patientId: string };
 
 export const DEMO_ADMIN_TOKEN = "demo-admin";
 
