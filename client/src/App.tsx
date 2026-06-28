@@ -47,6 +47,7 @@ import { Spinner } from "./components/ui/spinner";
 import { VideoCallProvider } from "./contexts/VideoCallContext";
 import { CameraStreamProvider } from "./contexts/CameraStreamContext";
 import VideoCallWidget from "./components/VideoCallWidget";
+import VideoCallPage from "./pages/VideoCallPage";
 
 interface ProtectedRouteProps {
   path: string;
@@ -92,6 +93,7 @@ function Router() {
       <Route path={"/login/admin"} component={AdminLogin} />
       <Route path={"/login/patient"} component={PatientLogin} />
       <Route path={"/role-selection"} component={RoleSelection} />
+      <Route path={"/video-call"} component={VideoCallPage} />
 
       {/* Admin ICU Dashboard */}
       <Route path={"/dashboard"} component={Dashboard} />
