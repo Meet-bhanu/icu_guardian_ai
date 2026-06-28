@@ -1,47 +1,36 @@
-import { useAuth } from "@/_core/hooks/useAuth";
 import { useMemo } from "react";
-import {
-  clearPatientSession,
-  getPatientSession,
-  type PatientSession,
-} from "@/lib/patientSession";
+import { useIcuAuth } from "@/hooks/useIcuAuth";
 
 export function usePatientAuth() {
-  const auth = useAuth();
-  const demoSession = getPatientSession();
+  const auth = useIcuAuth();
 
   const patientUser = useMemo(() => {
     if (auth.user?.role === "patient") {
       return auth.user;
     }
-    if (demoSession) {
-      return {
-        id: 0,
-        openId: demoSession.patientId,
-        name: demoSession.name,
-        email: demoSession.email,
-        loginMethod: "demo",
-        role: "patient" as const,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastSignedIn: new Date(),
-      };
-    }
     return null;
-  }, [auth.user, demoSession]);
+  }, [auth.user]);
 
-  const session = demoSession as PatientSession | null;
-
-  const logout = async () => {
-    clearPatientSession();
-    await auth.logout();
-  };
+  const session = useMemo(() => {
+    if (!patientUser) return null;
+    const patient = patientUser.patient as {
+      patientPublicId?: string;
+      bedNumber?: string;
+    } | undefined;
+    return {
+      patientId: patient?.patientPublicId ?? "",
+      name: patientUser.name ?? "",
+      email: patientUser.email ?? "",
+      role: "patient" as const,
+      bedNo: patient?.bedNumber ?? "",
+    };
+  }, [patientUser]);
 
   return {
     user: patientUser,
     session,
     loading: auth.loading,
     isPatient: Boolean(patientUser),
-    logout,
+    logout: auth.logout,
   };
 }

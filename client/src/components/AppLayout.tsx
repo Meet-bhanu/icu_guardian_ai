@@ -13,6 +13,10 @@ import {
   Search,
   Menu,
   X,
+  Stethoscope,
+  FileText,
+  MessageSquare,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -29,8 +33,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import AdminPatientQuickAccess from "@/components/AdminPatientQuickAccess";
-import { usePatientAuth } from "@/hooks/usePatientAuth";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useIcuAuth } from "@/hooks/useIcuAuth";
+import { isAdminRole } from "@/lib/authApi";
 
 function getInitials(name?: string | null): string {
   if (!name) return "AD";
@@ -49,12 +53,12 @@ export interface NavItem {
 
 export const adminNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Users, label: "Patients", path: "/dashboard/patients" },
-  { icon: Monitor, label: "Live Monitoring", path: "/dashboard/monitoring" },
-  { icon: Activity, label: "Waveforms", path: "/dashboard/waveforms" },
-  { icon: Pill, label: "Medications", path: "/dashboard/medications" },
+  { icon: Users, label: "Patient Management", path: "/dashboard/patient-management" },
+  { icon: Stethoscope, label: "Doctor Management", path: "/dashboard/doctor-management" },
   { icon: Bell, label: "Alerts", path: "/dashboard/alerts" },
+  { icon: FileText, label: "Reports", path: "/dashboard/reports" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
+  { icon: MessageSquare, label: "Feedback Analytics", path: "/dashboard/feedback" },
 ];
 
 export const patientNavItems: NavItem[] = [
@@ -64,6 +68,7 @@ export const patientNavItems: NavItem[] = [
   { icon: Pill, label: "Medications", path: "/patient/medications" },
   { icon: Bell, label: "Alerts", path: "/patient/alerts" },
   { icon: Settings, label: "Settings", path: "/patient/settings" },
+  { icon: MessageSquare, label: "Validation Feedback", path: "/feedback" },
 ];
 
 const patientDashboardRedirect: Record<string, string> = {
@@ -92,22 +97,25 @@ export default function AppLayout({
   userName,
   userRole,
   userInitials,
-  logoutPath,
+  logoutPath = "/login",
   onLogout,
   searchPlaceholder = "Search patients, alerts...",
 }: AppLayoutProps) {
-  const { user: patientUser, session, isPatient, logout: patientLogout } = usePatientAuth();
+  const { user, loading, logout, isAuthenticated } = useIcuAuth();
+
+  const isPatient = user?.role === "patient";
+  const isAdmin = isAdminRole(user?.role);
 
   const resolvedNavItems = navItems ?? (isPatient ? patientNavItems : adminNavItems);
-  const resolvedUserName = userName ?? (isPatient ? (patientUser?.name ?? "Patient") : "Admin");
+  const resolvedUserName = userName ?? user?.name ?? (isPatient ? "Patient" : "Admin");
   const resolvedUserRole =
     userRole ??
     (isPatient
-      ? `${session?.bedNo ?? "ICU-01"} · ${session?.patientId ?? "P001"}`
-      : "ICU Supervisor");
-  const resolvedUserInitials = userInitials ?? (isPatient ? getInitials(patientUser?.name) : "AD");
-  const resolvedLogoutPath = logoutPath ?? (isPatient ? "/login/patient" : "/login/admin");
-  const resolvedOnLogout = onLogout ?? (isPatient ? patientLogout : undefined);
+      ? `${(user?.patient as { bedNumber?: string } | undefined)?.bedNumber ?? "ICU"} · ${(user?.patient as { patientPublicId?: string } | undefined)?.patientPublicId ?? ""}`
+      : isAdmin ? "Super Admin" : "Staff");
+  const resolvedUserInitials = userInitials ?? getInitials(user?.name);
+  const resolvedOnLogout = onLogout ?? logout;
+
   const resolvedSearchPlaceholder = searchPlaceholder !== "Search patients, alerts..."
     ? searchPlaceholder
     : (isPatient ? "Search your records..." : "Search patients, alerts...");
@@ -116,46 +124,25 @@ export default function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
 
-  const { user, isAuthenticated, loading } = useAuth();
-
   useEffect(() => {
     if (loading) return;
 
-    if (typeof window !== "undefined") {
-      const path = window.location.pathname;
-      const isDemoPatient = sessionStorage.getItem("icu-patient-session") !== null;
-      const isBackendPatient = isAuthenticated && user && user.role === "patient";
-      const isPatientUser = isPatient || isDemoPatient || isBackendPatient;
+    const path = window.location.pathname;
 
-      if (isPatientUser && path.startsWith("/dashboard")) {
-        setLocation(patientDashboardRedirect[path] ?? "/patient/dashboard");
-        return;
-      }
+    if (isPatient && path.startsWith("/dashboard")) {
+      setLocation(patientDashboardRedirect[path] ?? "/patient/dashboard");
+      return;
+    }
 
-      if (path.startsWith("/dashboard")) {
-        const isDemoAdmin = sessionStorage.getItem("icu-admin-logged-in") === "true";
-        const isBackendAdmin = isAuthenticated && user && user.role !== "patient";
-        if (!isDemoAdmin && !isBackendAdmin) {
-          setLocation("/login/admin");
-        }
-      } else if (path.startsWith("/patient")) {
-        if (!isDemoPatient && !isBackendPatient) {
-          setLocation("/login/patient");
-        }
-      }
+    if (!isAuthenticated && (path.startsWith("/dashboard") || path.startsWith("/patient") || path.startsWith("/doctor"))) {
+      setLocation("/login");
     }
   }, [loading, isAuthenticated, user, location, setLocation, isPatient]);
 
   const handleLogout = async () => {
     setShowLogout(false);
-    sessionStorage.removeItem("icu-admin-logged-in");
-    sessionStorage.removeItem("icu-patient-session");
-    if (resolvedOnLogout) {
-      await resolvedOnLogout();
-    } else {
-      await patientLogout();
-    }
-    setLocation(resolvedLogoutPath);
+    await resolvedOnLogout();
+    setLocation(logoutPath);
   };
 
   const rootPath = resolvedNavItems[0]?.path ?? "/dashboard";
@@ -242,7 +229,16 @@ export default function AppLayout({
           </div>
 
           <div className="flex items-center gap-3 ml-auto">
-            <button className="relative p-2 rounded-lg hover:bg-accent text-foreground">
+            <Link href="/feedback">
+              <button 
+                title="Give Market Feedback"
+                className="relative px-3 py-1.5 rounded-lg hover:bg-primary/10 text-primary hover:text-primary transition-all flex items-center gap-1.5 border border-primary/20 bg-primary/5 text-xs font-bold shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
+                <span>Feedback</span>
+              </button>
+            </Link>
+            <button className="relative p-2 rounded-lg hover:bg-accent text-foreground shrink-0">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
             </button>

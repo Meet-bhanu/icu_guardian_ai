@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Upload, FileText, Loader2 } from "lucide-react";
+import { Download, Upload, FileText, Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   downloadReportPdf,
@@ -187,6 +187,24 @@ export default function ReportsContent({
                     <p className="text-sm text-gray-700 leading-relaxed">{selected.recommendations}</p>
                   </div>
                 )}
+                
+                {/* AI Validation Feedback Trigger Card */}
+                <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6">
+                  <div className="space-y-1">
+                    <h5 className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      AI Diagnostic Insights
+                    </h5>
+                    <p className="text-[11px] text-gray-500 font-medium">
+                      This medical summary was automatically parsed and extracted by the HealthHalo AI agent.
+                    </p>
+                  </div>
+                  <a href="/feedback?prefill_ai_rating=5">
+                    <Button size="sm" variant="outline" className="text-xs font-bold border-primary/30 text-primary hover:bg-primary/10 h-8 shrink-0">
+                      Rate AI Accuracy
+                    </Button>
+                  </a>
+                </div>
               </div>
               <Button variant="outline" className="gap-2" onClick={handleDownload} disabled={downloading}>
                 {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}

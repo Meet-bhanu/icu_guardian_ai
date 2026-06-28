@@ -13,10 +13,14 @@ export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
+  username: varchar("username", { length: 64 }).unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }),
   name: text("name"),
   email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 20 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin", "doctor", "patient", "operator"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "super_admin", "doctor", "patient", "operator"]).default("user").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -33,8 +37,17 @@ export const patients = mysqlTable("patients", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   assignedDoctorId: int("assignedDoctorId"),
+  /** Public-facing ID e.g. ICU-2026-0001 */
+  patientPublicId: varchar("patientPublicId", { length: 20 }).unique(),
   bedNumber: varchar("bedNumber", { length: 20 }),
   medicalRecordNumber: varchar("medicalRecordNumber", { length: 50 }).unique(),
+  age: int("age"),
+  gender: varchar("gender", { length: 20 }),
+  phone: varchar("phone", { length: 20 }),
+  address: text("address"),
+  bloodGroup: varchar("bloodGroup", { length: 10 }),
+  medicalHistory: text("medicalHistory"),
+  emergencyContact: text("emergencyContact"),
   dateOfBirth: timestamp("dateOfBirth"),
   admissionDate: timestamp("admissionDate").defaultNow().notNull(),
   dischargeDateEstimated: timestamp("dischargeDateEstimated"),
@@ -182,3 +195,61 @@ export const notificationPreferences = mysqlTable("notificationPreferences", {
 
 export type NotificationPreference = typeof notificationPreferences.$inferSelect;
 export type InsertNotificationPreference = typeof notificationPreferences.$inferInsert;
+
+/**
+ * Doctor profile linked to a user account.
+ */
+export const doctors = mysqlTable("doctors", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  /** Public-facing ID e.g. DOC-2026-0001 */
+  doctorPublicId: varchar("doctorPublicId", { length: 20 }).unique(),
+  department: varchar("department", { length: 100 }),
+  specialization: varchar("specialization", { length: 100 }),
+  phone: varchar("phone", { length: 20 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Doctor = typeof doctors.$inferSelect;
+export type InsertDoctor = typeof doctors.$inferInsert;
+
+/**
+ * Audit log for super admin actions.
+ */
+export const auditLogs = mysqlTable("auditLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  performedBy: int("performedBy").notNull(),
+  action: varchar("action", { length: 100 }).notNull(),
+  entityType: varchar("entityType", { length: 50 }),
+  entityId: int("entityId"),
+  details: text("details"),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+/**
+ * Feedback table for Market Validation & Product-Market Fit.
+ */
+export const feedback = mysqlTable("feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  userRole: varchar("userRole", { length: 50 }).notNull(),
+  overallExperience: int("overallExperience").notNull(),
+  easeOfUse: int("easeOfUse").notNull(),
+  aiAccuracy: int("aiAccuracy").notNull(),
+  uiDesign: int("uiDesign").notNull(),
+  recommend: varchar("recommend", { length: 10 }).notNull(),
+  useInHospital: varchar("useInHospital", { length: 10 }).notNull(),
+  likeMost: text("likeMost"),
+  problemsFaced: text("problemsFaced"),
+  suggestions: text("suggestions"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = typeof feedback.$inferInsert;

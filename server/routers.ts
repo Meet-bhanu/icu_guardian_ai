@@ -2,7 +2,9 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import * as db from "./db";
 import { z } from "zod";
+import * as db from "./db";
 import {
   initiatePatientCall,
   initiateAdminCall,
@@ -308,6 +310,98 @@ export const appRouter = router({
         }
         return { success: true, call };
       }),
+  }),
+
+  // Market Validation & Feedback Router
+  feedback: router({
+    submit: publicProcedure
+      .input(z.object({
+        fullName: z.string().min(1, "Full name is required"),
+        email: z.string().email("Invalid email format"),
+        userRole: z.string().min(1, "User role is required"),
+        overallExperience: z.number().min(1).max(5),
+        easeOfUse: z.number().min(1).max(5),
+        aiAccuracy: z.number().min(1).max(5),
+        uiDesign: z.number().min(1).max(5),
+        recommend: z.enum(["Yes", "Maybe", "No"]),
+        useInHospital: z.enum(["Yes", "No"]),
+        likeMost: z.string().optional(),
+        problemsFaced: z.string().optional(),
+        suggestions: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await db.createFeedback({
+          ...input,
+          createdAt: new Date(),
+        });
+        return { success: true, feedback: result };
+      }),
+
+    getAll: publicProcedure.query(async () => {
+      return await db.getAllFeedback();
+    }),
+
+    getStats: publicProcedure.query(async () => {
+      const allFeedback = await db.getAllFeedback();
+      const count = allFeedback.length;
+      if (count === 0) {
+        return {
+          totalCount: 0,
+          avgOverall: 0,
+          avgEaseOfUse: 0,
+          avgAiAccuracy: 0,
+          avgUiDesign: 0,
+          recommendRate: 0,
+          hospitalAdoptionRate: 0,
+          byRole: {},
+          byRating: [],
+        };
+      }
+
+      let sumOverall = 0;
+      let sumEaseOfUse = 0;
+      let sumAiAccuracy = 0;
+      let sumUiDesign = 0;
+      let recommendYesOrMaybeCount = 0;
+      let hospitalUseYesCount = 0;
+      const byRole: Record<string, number> = {};
+      const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+      allFeedback.forEach((f) => {
+        sumOverall += f.overallExperience;
+        sumEaseOfUse += f.easeOfUse;
+        sumAiAccuracy += f.aiAccuracy;
+        sumUiDesign += f.uiDesign;
+
+        if (f.recommend === "Yes" || f.recommend === "Maybe") {
+          recommendYesOrMaybeCount++;
+        }
+        if (f.useInHospital === "Yes") {
+          hospitalUseYesCount++;
+        }
+
+        byRole[f.userRole] = (byRole[f.userRole] || 0) + 1;
+        const rating = f.overallExperience as 1 | 2 | 3 | 4 | 5;
+        if (ratingCounts[rating] !== undefined) {
+          ratingCounts[rating]++;
+        }
+      });
+
+      return {
+        totalCount: count,
+        avgOverall: Number((sumOverall / count).toFixed(1)),
+        avgEaseOfUse: Number((sumEaseOfUse / count).toFixed(1)),
+        avgAiAccuracy: Number((sumAiAccuracy / count).toFixed(1)),
+        avgUiDesign: Number((sumUiDesign / count).toFixed(1)),
+        recommendRate: Math.round((recommendYesOrMaybeCount / count) * 100),
+        hospitalAdoptionRate: Math.round((hospitalUseYesCount / count) * 100),
+        byRole,
+        byRating: Object.entries(ratingCounts).map(([rating, val]) => ({
+          rating: Number(rating),
+          count: val,
+        })),
+      };
+    }),
   }),
 });
 

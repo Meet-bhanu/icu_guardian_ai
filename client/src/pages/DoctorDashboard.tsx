@@ -1,20 +1,19 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useIcuAuth } from "@/hooks/useIcuAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Heart, AlertCircle, Pill, Users, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
-import { trpc } from "@/lib/trpc";
 import VitalSignsCard from "@/components/VitalSignsCard";
 import AlertPanel from "@/components/AlertPanel";
 import MedicationRemindersPanel from "@/components/MedicationRemindersPanel";
 
 export default function DoctorDashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout } = useIcuAuth();
   const [, setLocation] = useLocation();
 
   const handleLogout = async () => {
     await logout();
-    setLocation("/");
+    setLocation("/login");
   };
 
   return (

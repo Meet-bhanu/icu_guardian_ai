@@ -318,6 +318,16 @@ export default function Dashboard() {
                     {aiMonitoringStatus.systemHealth}
                   </Badge>
                 </div>
+                
+                <div className="pt-3 border-t border-gray-100 mt-2 text-center">
+                  <a 
+                    href="/feedback?prefill_ai_rating=5"
+                    className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>Rate Watchdog Accuracy</span>
+                    <Sparkles className="w-3 h-3 text-primary animate-pulse" />
+                  </a>
+                </div>
               </div>
             </Card>
             

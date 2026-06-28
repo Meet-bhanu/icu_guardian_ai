@@ -193,23 +193,21 @@ export function relayCameraIceCandidate(patientId: string, candidate: RTCIceCand
   let senderRole: "admin" | "patient" | null = null;
   
   // Check if sender is admin
-  for (const ws of adminSockets) {
+  adminSockets.forEach((ws) => {
     if (socketIdMap.get(ws) === socketId) {
       senderRole = "admin";
-      break;
     }
-  }
+  });
   
   // Check if sender is patient
   if (!senderRole) {
     const patientSocketsSet = patientSockets.get(normalizedId);
     if (patientSocketsSet) {
-      for (const ws of patientSocketsSet) {
+      patientSocketsSet.forEach((ws) => {
         if (socketIdMap.get(ws) === socketId) {
           senderRole = "patient";
-          break;
         }
-      }
+      });
     }
   }
   

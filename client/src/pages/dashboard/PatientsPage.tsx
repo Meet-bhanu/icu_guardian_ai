@@ -1,6 +1,7 @@
 import AppLayout from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
@@ -20,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronRight, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { setAdminSelectedPatientId } from "@/hooks/useAdminSelectedPatient";
@@ -45,11 +46,14 @@ const statusStyles = {
 
 export default function PatientsPage() {
   const { isPatient } = usePatientAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   const [patientsList, setPatientsList] = useState<Patient[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [doctorFilter, setDoctorFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showAssignedOnly, setShowAssignedOnly] = useState(false);
 
   // Dialog controls
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -86,12 +90,21 @@ export default function PatientsPage() {
       patient.status.toLowerCase() === statusFilter.toLowerCase();
     
     let matchesDoctor = true;
-    if (doctorFilter !== "all") {
+    if (showAssignedOnly && user?.role === "doctor") {
+      matchesDoctor = patient.doctor === user.name;
+    } else if (doctorFilter !== "all") {
       if (doctorFilter === "chen") matchesDoctor = patient.doctor === "Dr. Sarah Chen";
       else if (doctorFilter === "wilson") matchesDoctor = patient.doctor === "Dr. James Wilson";
       else if (doctorFilter === "park") matchesDoctor = patient.doctor === "Dr. Lisa Park";
     }
-    return matchesStatus && matchesDoctor;
+
+    const matchesSearch =
+      searchQuery.trim() === "" ||
+      patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      patient.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      patient.bedNo.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesStatus && matchesDoctor && matchesSearch;
   });
 
   const openAddDialog = () => {
@@ -212,7 +225,16 @@ export default function PatientsPage() {
         </div>
 
         <Card className="p-4 shadow-sm border border-border">
-          <div className="flex flex-wrap gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="relative w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search patient name, ID, bed..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 text-xs h-9 bg-white"
+              />
+            </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40 bg-white">
                 <SelectValue placeholder="Status" />
@@ -224,7 +246,7 @@ export default function PatientsPage() {
                 <SelectItem value="warning">Warning</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+            <Select value={doctorFilter} onValueChange={setDoctorFilter} disabled={showAssignedOnly}>
               <SelectTrigger className="w-48 bg-white">
                 <SelectValue placeholder="Doctor" />
               </SelectTrigger>
@@ -235,6 +257,18 @@ export default function PatientsPage() {
                 <SelectItem value="park">Dr. Lisa Park</SelectItem>
               </SelectContent>
             </Select>
+            {user?.role === "doctor" && (
+              <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-xs font-semibold cursor-pointer select-none" onClick={() => setShowAssignedOnly(!showAssignedOnly)}>
+                <input
+                  type="checkbox"
+                  checked={showAssignedOnly}
+                  onChange={(e) => setShowAssignedOnly(e.target.checked)}
+                  className="rounded text-primary focus:ring-primary border-gray-300 w-3.5 h-3.5"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="text-gray-750">Assigned to Me</span>
+              </div>
+            )}
           </div>
 
           <div className="overflow-x-auto">
