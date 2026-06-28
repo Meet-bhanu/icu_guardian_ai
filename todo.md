@@ -13,7 +13,7 @@
 - [x] Implement tRPC procedures for medication management
 - [x] Set up role-based access control (doctor, patient, operator roles)
 - [x] Implement server-side cron job system for medication reminders (Heartbeat API)
-- [ ] Write vitest tests for all backend procedures
+- [x] Write vitest tests for all backend procedures
 
 ## Phase 3: Public Landing Page
 - [x] Build header navigation with: Home, About Us, Contact Us, Sign Up, Log In
@@ -31,28 +31,28 @@
 - [x] Create login page for patients with Manus OAuth integration (using Manus OAuth)
 - [x] Implement role selection during signup (via Manus OAuth)
 - [x] Add logout functionality to all dashboards
-- [ ] Write vitest tests for authentication flows
+- [x] Write vitest tests for authentication flows
 
 ## Phase 5: Doctor Dashboard
 - [x] Create dashboard layout with sidebar navigation
 - [x] Display real-time vital signs per patient (heart rate, SpO2, BP, temperature) - VitalSignsCard component
 - [x] Create alert management panel showing active and resolved alerts - AlertPanel component
 - [x] Build medication reminder overview with compliance tracking - MedicationRemindersPanel component
-- [ ] Build patient list view with search and filtering
-- [ ] Implement patient detail modal/page with full vital history
-- [ ] Add ability to view assigned patients
-- [ ] Write vitest tests for doctor dashboard features
+- [x] Build patient list view with search and filtering
+- [x] Implement patient detail modal/page with full vital history
+- [x] Add ability to view assigned patients
+- [x] Write vitest tests for doctor dashboard features
 
 ## Phase 6: Patient Dashboard
 - [x] Create dashboard layout with personal information
 - [x] Display vital sign history (heart rate, SpO2, BP, temperature) - VitalSignsCard component
 - [x] Display medication schedule with upcoming reminders - MedicationRemindersPanel component
-- [ ] Build vital sign history chart with trends
-- [ ] Build recovery trend visualization
-- [ ] Show assigned doctor information and contact
-- [ ] Display medication compliance status
-- [ ] Add ability to acknowledge medication reminders
-- [ ] Write vitest tests for patient dashboard features
+- [x] Build vital sign history chart with trends
+- [x] Build recovery trend visualization
+- [x] Show assigned doctor information and contact
+- [x] Display medication compliance status
+- [x] Add ability to acknowledge medication reminders
+- [x] Write vitest tests for patient dashboard features
 
 ## Phase 7: Real-Time Critical Alert System
 - [ ] Create alert detection logic based on vital sign thresholds

@@ -11,6 +11,8 @@ import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminLogin from "./pages/AdminLogin";
 import PatientLogin from "./pages/PatientLogin";
 import Dashboard from "./pages/dashboard/Dashboard";
+import Feedback from "./pages/Feedback";
+import FeedbackAnalytics from "./pages/dashboard/FeedbackAnalytics";
 import PatientsPage from "./pages/dashboard/PatientsPage";
 import LiveMonitoringPage from "./pages/dashboard/LiveMonitoringPage";
 import WaveformsPage from "./pages/dashboard/WaveformsPage";
@@ -92,9 +94,11 @@ function Router() {
       <Route path={"/login/admin"} component={AdminLogin} />
       <Route path={"/login/patient"} component={PatientLogin} />
       <Route path={"/role-selection"} component={RoleSelection} />
+      <Route path={"/feedback"} component={Feedback} />
 
       {/* Admin ICU Dashboard */}
       <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/dashboard/feedback"} component={FeedbackAnalytics} />
       <Route path={"/dashboard/patients"} component={PatientsPage} />
 
       {/* Patient detail (admin) — accessed by clicking a patient */}

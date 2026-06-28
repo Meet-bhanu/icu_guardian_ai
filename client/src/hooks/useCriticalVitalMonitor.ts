@@ -23,7 +23,7 @@ export function useCriticalVitalMonitor({
   const previousVitalsRef = useRef<PatientVitals | null>(null);
   const lastAlertAtRef = useRef<number>(0);
   const [codeBlueEnabled, setCodeBlueEnabled] = useState(
-    () => typeof window !== "undefined" && localStorage.getItem("icu-enable-code-blue") === "true"
+    () => typeof window !== "undefined" && localStorage.getItem("icu-enable-code-blue") !== "false"
   );
 
   useEffect(() => {

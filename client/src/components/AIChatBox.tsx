@@ -261,9 +261,27 @@ export function AIChatBox({
                       )}
                     >
                       {message.role === "assistant" ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <Streamdown>{message.content}</Streamdown>
-                        </div>
+                        <>
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <Streamdown>{message.content}</Streamdown>
+                          </div>
+                          <div className="flex items-center gap-2 mt-2 pt-1.5 border-t border-gray-200/50 text-[10px] text-gray-400 font-semibold select-none">
+                            <span>Is this AI response helpful?</span>
+                            <a 
+                              href="/feedback?prefill_ai_rating=5"
+                              className="text-primary hover:underline"
+                            >
+                              Yes
+                            </a>
+                            <span>·</span>
+                            <a 
+                              href="/feedback?prefill_ai_rating=2"
+                              className="text-gray-500 hover:underline"
+                            >
+                              No
+                            </a>
+                          </div>
+                        </>
                       ) : (
                         <p className="whitespace-pre-wrap text-sm">
                           {message.content}

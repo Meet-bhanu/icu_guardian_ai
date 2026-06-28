@@ -24,6 +24,7 @@ export default function Home() {
             <a href="#home" className="font-semibold text-foreground hover:text-primary transition-colors">Home</a>
             <a href="#about" className="font-semibold text-foreground hover:text-primary transition-colors">About Us</a>
             <a href="#contact" className="font-semibold text-foreground hover:text-primary transition-colors">Contact Us</a>
+            <a href="/feedback" className="font-semibold text-foreground hover:text-primary transition-colors">Feedback</a>
           </div>
 
           <div className="flex items-center gap-3">

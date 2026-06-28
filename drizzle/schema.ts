@@ -182,3 +182,26 @@ export const notificationPreferences = mysqlTable("notificationPreferences", {
 
 export type NotificationPreference = typeof notificationPreferences.$inferSelect;
 export type InsertNotificationPreference = typeof notificationPreferences.$inferInsert;
+
+/**
+ * Feedback table for Market Validation & Product-Market Fit.
+ */
+export const feedback = mysqlTable("feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  userRole: varchar("userRole", { length: 50 }).notNull(), // Doctor, Nurse, Medical Student, Hospital Admin, Patient, General User
+  overallExperience: int("overallExperience").notNull(), // 1-5 rating
+  easeOfUse: int("easeOfUse").notNull(), // 1-5
+  aiAccuracy: int("aiAccuracy").notNull(), // 1-5
+  uiDesign: int("uiDesign").notNull(), // 1-5
+  recommend: varchar("recommend", { length: 10 }).notNull(), // "Yes", "Maybe", "No"
+  useInHospital: varchar("useInHospital", { length: 10 }).notNull(), // "Yes", "No"
+  likeMost: text("likeMost"),
+  problemsFaced: text("problemsFaced"),
+  suggestions: text("suggestions"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = typeof feedback.$inferInsert;

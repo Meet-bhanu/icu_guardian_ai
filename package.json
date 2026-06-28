@@ -51,11 +51,13 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "cookie": "^1.0.2",
+    "cross-env": "^7.0.3",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.21.2",
+    "firebase": "^12.15.0",
     "framer-motion": "^12.23.22",
     "gsap": "^3.15.0",
     "input-otp": "^1.4.2",
@@ -79,8 +81,7 @@
     "vaul": "^1.1.2",
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
-    "zod": "^4.1.12",
-    "cross-env": "^7.0.3"
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.15",
