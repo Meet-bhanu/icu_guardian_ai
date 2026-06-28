@@ -37,8 +37,10 @@ export function registerAuthRoutes(app: Express) {
   app.post("/api/login", async (req: Request, res: Response) => {
     try {
       const { username, password, role: selectedRole, rememberMe } = req.body ?? {};
+      const normalizedUsername = String(username ?? "").trim();
+      const normalizedPassword = String(password ?? "").trim();
 
-      if (!username || !password || !selectedRole) {
+      if (!normalizedUsername || !normalizedPassword || !selectedRole) {
         res.status(400).json({ error: "Username, password, and role are required" });
         return;
       }
@@ -53,7 +55,7 @@ export function registerAuthRoutes(app: Express) {
       let dbUnavailable = false;
 
       try {
-        user = await db.getUserByUsername(String(username).trim());
+        user = await db.getUserByUsername(normalizedUsername);
       } catch (dbError) {
         dbUnavailable = true;
         console.warn("[Login] Database unavailable, using dev fallback:", dbError);
@@ -75,7 +77,10 @@ export function registerAuthRoutes(app: Express) {
           return;
         }
 
-        const valid = await verifyPassword(String(password), user.passwordHash);
+        const valid = await verifyPassword(
+          normalizedPassword,
+          String(user.passwordHash ?? "")
+        );
         if (!valid) {
           res.status(401).json({ error: "Invalid credentials" });
           return;
@@ -87,7 +92,7 @@ export function registerAuthRoutes(app: Express) {
           // non-fatal
         }
       } else if (DEV_MODE || dbUnavailable) {
-        user = findDevUser(String(username), String(password), expectedRole) ?? undefined;
+        user = findDevUser(normalizedUsername, normalizedPassword, expectedRole) ?? undefined;
         if (!user) {
           res.status(401).json({
             error: "Invalid credentials. Use superadmin / SuperAdmin@2026 for Super Admin.",

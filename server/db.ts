@@ -287,7 +287,12 @@ export async function getUserById(id: number) {
 export async function getUserByUsername(username: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+  const normalized = username.trim().toLowerCase();
+  const result = await db
+    .select()
+    .from(users)
+    .where(sql`LOWER(${users.username}) = ${normalized}`)
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 

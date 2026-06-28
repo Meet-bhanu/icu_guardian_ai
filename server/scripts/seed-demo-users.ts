@@ -37,12 +37,13 @@ const DEMO_USERS: SeedUser[] = [
 
 async function ensureUser(account: SeedUser): Promise<number> {
   const existing = await db.getUserByUsername(account.username);
+  const passwordHash = await hashPassword(account.password);
+
   if (existing) {
-    console.log(`  ✓ ${account.role} "${account.username}" already exists (id: ${existing.id})`);
+    await db.updateUser(existing.id, { passwordHash, isActive: true });
+    console.log(`  ✓ Reset ${account.role} "${account.username}" password (id: ${existing.id})`);
     return existing.id;
   }
-
-  const passwordHash = await hashPassword(account.password);
   const userId = await db.createCredentialUser({
     openId: generateOpenId(),
     username: account.username,

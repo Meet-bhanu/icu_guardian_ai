@@ -24,6 +24,15 @@ const ROLES = [
   { value: "patient", label: "Patient" },
 ] as const;
 
+const DEMO_CREDENTIALS: Record<
+  (typeof ROLES)[number]["value"],
+  { username: string; password: string }
+> = {
+  super_admin: { username: "superadmin", password: "SuperAdmin@2026" },
+  doctor: { username: "doc0001", password: "Doctor@2026" },
+  patient: { username: "icu0001", password: "Patient@2026" },
+};
+
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login, isAuthenticated, user, loading } = useIcuAuth();
@@ -56,15 +65,20 @@ export default function Login() {
     return <Redirect to={getDashboardForRole(user.role)} />;
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrors({});
 
-    if (!username.trim()) {
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const submittedUsername = String(formData.get("username") ?? username).trim();
+    const submittedPassword = String(formData.get("password") ?? password).trim();
+
+    if (!submittedUsername) {
       setErrors({ username: "Username is required" });
       return;
     }
-    if (!password) {
+    if (!submittedPassword) {
       setErrors({ password: "Password is required" });
       return;
     }
@@ -72,8 +86,8 @@ export default function Login() {
     setSubmitting(true);
     try {
       const loggedIn = await login({
-        username: username.trim(),
-        password,
+        username: submittedUsername,
+        password: submittedPassword,
         role: role as "super_admin" | "doctor" | "patient",
         rememberMe: remember,
       });
@@ -115,9 +129,25 @@ export default function Login() {
               <p><span className="font-semibold">Doctor:</span> <span className="font-mono font-bold text-amber-900">doc0001</span> / <span className="font-mono font-bold text-amber-900">Doctor@2026</span></p>
               <p><span className="font-semibold">Patient:</span> <span className="font-mono font-bold text-amber-900">icu0001</span> / <span className="font-mono font-bold text-amber-900">Patient@2026</span></p>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full h-8 text-xs border-amber-300 text-amber-800 hover:bg-amber-100"
+              onClick={() => {
+                const demo = DEMO_CREDENTIALS[role as keyof typeof DEMO_CREDENTIALS];
+                if (demo) {
+                  setUsername(demo.username);
+                  setPassword(demo.password);
+                  toast.success("Demo credentials filled — click Login");
+                }
+              }}
+            >
+              Fill demo credentials for selected role
+            </Button>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-5" autoComplete="off">
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
               <Select value={role} onValueChange={setRole}>
@@ -138,11 +168,12 @@ export default function Login() {
               <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
+                name="username"
                 placeholder="Enter your username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className={cn("h-11", errors.username && "border-red-500")}
-                autoComplete="username"
+                autoComplete="off"
               />
               {errors.username && (
                 <p className="text-xs font-semibold text-red-500">{errors.username}</p>
@@ -154,12 +185,13 @@ export default function Login() {
               <div className="relative">
                 <Input
                   id="password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={cn("h-11 pr-10", errors.password && "border-red-500")}
-                  autoComplete="current-password"
+                  autoComplete="off"
                 />
                 <button
                   type="button"
