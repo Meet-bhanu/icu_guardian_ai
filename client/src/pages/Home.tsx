@@ -1,4 +1,5 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useIcuAuth } from "@/hooks/useIcuAuth";
+import { getDashboardForRole } from "@/lib/authApi";
 import { Button } from "@/components/ui/button";
 import { Heart, Activity, AlertCircle, ChevronRight, Shield, Pill, Building2 } from "lucide-react";
 import { Link } from "wouter";
@@ -7,7 +8,7 @@ import TrueFocus from "@/components/TrueFocus/TrueFocus";
 import ScrollReveal from "@/components/ScrollReveal/ScrollReveal";
 
 export default function Home() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user } = useIcuAuth();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -30,16 +31,16 @@ export default function Home() {
             {isAuthenticated ? (
               <>
                 <span className="text-sm text-muted-foreground font-medium hidden sm:inline">Welcome, {user?.name}</span>
-                <Link href={user?.role === "doctor" ? "/doctor/dashboard" : "/dashboard"}>
+                <Link href={user?.role === "doctor" ? "/doctor/dashboard" : user?.role === "patient" ? "/patient/dashboard" : "/dashboard"}>
                   <Button>Dashboard</Button>
                 </Link>
               </>
             ) : (
               <>
-                <a href="/login/patient">
-                  <Button variant="outline" className="font-semibold border-border">Patient Login</Button>
+                <a href="/login">
+                  <Button variant="outline" className="font-semibold border-border">Login</Button>
                 </a>
-                <a href="/login/admin">
+                <a href="/login">
                   <Button className="font-semibold shadow-md shadow-primary/20">Staff Login</Button>
                 </a>
               </>
@@ -74,12 +75,12 @@ export default function Home() {
                 Reaching the community with quality care — real-time vitals, AI surveillance, and coordinated response.
               </p>
               <div className="flex flex-wrap gap-4 pt-2">
-                <a href="/login/patient">
+                <a href="/login">
                   <Button size="lg" className="px-8 font-semibold shadow-lg shadow-primary/25">
                     Patient Portal
                   </Button>
                 </a>
-                <a href="/login/admin">
+                <a href="/login">
                   <Button size="lg" variant="outline" className="px-8 font-semibold border-border bg-white">
                     Staff Login
                   </Button>
@@ -265,7 +266,7 @@ export default function Home() {
             Join hospitals and healthcare providers using HealthHalo to save lives and reduce response times.
           </p>
           <div className="flex gap-4 justify-center flex-wrap pt-2">
-            <a href="/login/admin">
+            <a href="/login">
               <Button size="lg" className="bg-white text-primary hover:bg-white/95 font-bold shadow-xl px-8">
                 Get Started Now
               </Button>

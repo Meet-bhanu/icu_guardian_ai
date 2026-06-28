@@ -13,6 +13,8 @@ import {
   Search,
   Menu,
   X,
+  Stethoscope,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -29,8 +31,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import AdminPatientQuickAccess from "@/components/AdminPatientQuickAccess";
-import { usePatientAuth } from "@/hooks/usePatientAuth";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useIcuAuth } from "@/hooks/useIcuAuth";
+import { isAdminRole } from "@/lib/authApi";
 
 function getInitials(name?: string | null): string {
   if (!name) return "AD";
@@ -49,11 +51,10 @@ export interface NavItem {
 
 export const adminNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Users, label: "Patients", path: "/dashboard/patients" },
-  { icon: Monitor, label: "Live Monitoring", path: "/dashboard/monitoring" },
-  { icon: Activity, label: "Waveforms", path: "/dashboard/waveforms" },
-  { icon: Pill, label: "Medications", path: "/dashboard/medications" },
+  { icon: Users, label: "Patient Management", path: "/dashboard/patient-management" },
+  { icon: Stethoscope, label: "Doctor Management", path: "/dashboard/doctor-management" },
   { icon: Bell, label: "Alerts", path: "/dashboard/alerts" },
+  { icon: FileText, label: "Reports", path: "/dashboard/reports" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
@@ -92,22 +93,25 @@ export default function AppLayout({
   userName,
   userRole,
   userInitials,
-  logoutPath,
+  logoutPath = "/login",
   onLogout,
   searchPlaceholder = "Search patients, alerts...",
 }: AppLayoutProps) {
-  const { user: patientUser, session, isPatient, logout: patientLogout } = usePatientAuth();
+  const { user, loading, logout, isAuthenticated } = useIcuAuth();
+
+  const isPatient = user?.role === "patient";
+  const isAdmin = isAdminRole(user?.role);
 
   const resolvedNavItems = navItems ?? (isPatient ? patientNavItems : adminNavItems);
-  const resolvedUserName = userName ?? (isPatient ? (patientUser?.name ?? "Patient") : "Admin");
+  const resolvedUserName = userName ?? user?.name ?? (isPatient ? "Patient" : "Admin");
   const resolvedUserRole =
     userRole ??
     (isPatient
-      ? `${session?.bedNo ?? "ICU-01"} · ${session?.patientId ?? "P001"}`
-      : "ICU Supervisor");
-  const resolvedUserInitials = userInitials ?? (isPatient ? getInitials(patientUser?.name) : "AD");
-  const resolvedLogoutPath = logoutPath ?? (isPatient ? "/login/patient" : "/login/admin");
-  const resolvedOnLogout = onLogout ?? (isPatient ? patientLogout : undefined);
+      ? `${(user?.patient as { bedNumber?: string } | undefined)?.bedNumber ?? "ICU"} · ${(user?.patient as { patientPublicId?: string } | undefined)?.patientPublicId ?? ""}`
+      : isAdmin ? "Super Admin" : "Staff");
+  const resolvedUserInitials = userInitials ?? getInitials(user?.name);
+  const resolvedOnLogout = onLogout ?? logout;
+
   const resolvedSearchPlaceholder = searchPlaceholder !== "Search patients, alerts..."
     ? searchPlaceholder
     : (isPatient ? "Search your records..." : "Search patients, alerts...");
@@ -116,46 +120,25 @@ export default function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
 
-  const { user, isAuthenticated, loading } = useAuth();
-
   useEffect(() => {
     if (loading) return;
 
-    if (typeof window !== "undefined") {
-      const path = window.location.pathname;
-      const isDemoPatient = sessionStorage.getItem("icu-patient-session") !== null;
-      const isBackendPatient = isAuthenticated && user && user.role === "patient";
-      const isPatientUser = isPatient || isDemoPatient || isBackendPatient;
+    const path = window.location.pathname;
 
-      if (isPatientUser && path.startsWith("/dashboard")) {
-        setLocation(patientDashboardRedirect[path] ?? "/patient/dashboard");
-        return;
-      }
+    if (isPatient && path.startsWith("/dashboard")) {
+      setLocation(patientDashboardRedirect[path] ?? "/patient/dashboard");
+      return;
+    }
 
-      if (path.startsWith("/dashboard")) {
-        const isDemoAdmin = sessionStorage.getItem("icu-admin-logged-in") === "true";
-        const isBackendAdmin = isAuthenticated && user && user.role !== "patient";
-        if (!isDemoAdmin && !isBackendAdmin) {
-          setLocation("/login/admin");
-        }
-      } else if (path.startsWith("/patient")) {
-        if (!isDemoPatient && !isBackendPatient) {
-          setLocation("/login/patient");
-        }
-      }
+    if (!isAuthenticated && (path.startsWith("/dashboard") || path.startsWith("/patient") || path.startsWith("/doctor"))) {
+      setLocation("/login");
     }
   }, [loading, isAuthenticated, user, location, setLocation, isPatient]);
 
   const handleLogout = async () => {
     setShowLogout(false);
-    sessionStorage.removeItem("icu-admin-logged-in");
-    sessionStorage.removeItem("icu-patient-session");
-    if (resolvedOnLogout) {
-      await resolvedOnLogout();
-    } else {
-      await patientLogout();
-    }
-    setLocation(resolvedLogoutPath);
+    await resolvedOnLogout();
+    setLocation(logoutPath);
   };
 
   const rootPath = resolvedNavItems[0]?.path ?? "/dashboard";

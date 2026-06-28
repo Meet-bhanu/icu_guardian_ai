@@ -23,7 +23,7 @@ export default function PatientLayout({ children }: PatientLayoutProps) {
       userName={user?.name ?? "Patient"}
       userRole={`${session?.bedNo ?? "ICU-01"} · ${session?.patientId ?? "P001"}`}
       userInitials={getInitials(user?.name)}
-      logoutPath="/login/patient"
+      logoutPath="/login"
       onLogout={logout}
       searchPlaceholder="Search your records..."
     >

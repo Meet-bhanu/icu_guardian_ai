@@ -6,12 +6,13 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { CriticalAlertProvider } from "./contexts/CriticalAlertContext";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
 import RoleSelection from "./pages/RoleSelection";
 import DoctorDashboard from "./pages/DoctorDashboard";
-import AdminLogin from "./pages/AdminLogin";
-import PatientLogin from "./pages/PatientLogin";
 import Dashboard from "./pages/dashboard/Dashboard";
 import PatientsPage from "./pages/dashboard/PatientsPage";
+import PatientManagementPage from "./pages/dashboard/PatientManagementPage";
+import DoctorManagementPage from "./pages/dashboard/DoctorManagementPage";
 import LiveMonitoringPage from "./pages/dashboard/LiveMonitoringPage";
 import WaveformsPage from "./pages/dashboard/WaveformsPage";
 import ReportsPage from "./pages/dashboard/ReportsPage";
@@ -42,97 +43,62 @@ import PatientPortalReportsPage from "./pages/patient/PatientReportsPage";
 import PatientPortalTrendsPage from "./pages/patient/PatientTrendsPage";
 import PatientPortalDoctorsPage from "./pages/patient/PatientDoctorsPage";
 import PatientPortalFamilyPage from "./pages/patient/PatientFamilyPage";
-import { useAuth } from "./_core/hooks/useAuth";
-import { Spinner } from "./components/ui/spinner";
 import { VideoCallProvider } from "./contexts/VideoCallContext";
 import VideoCallWidget from "./components/VideoCallWidget";
-
-interface ProtectedRouteProps {
-  path: string;
-  component: React.ComponentType;
-  requiredRole?: string;
-}
-
-function ProtectedRouteComponent({ Component, requiredRole }: { Component: React.ComponentType; requiredRole?: string }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spinner />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <NotFound />;
-  }
-
-  if (requiredRole && user.role !== requiredRole) {
-    return <NotFound />;
-  }
-
-  return <Component />;
-}
-
-function ProtectedRoute({ path, component: Component, requiredRole }: ProtectedRouteProps) {
-  return (
-    <Route
-      path={path}
-      component={() => <ProtectedRouteComponent Component={Component} requiredRole={requiredRole} />}
-    />
-  );
-}
+import { AuthRoute, LoginRedirect } from "./components/auth/AuthRoute";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
-      <Route path={"/login/admin"} component={AdminLogin} />
-      <Route path={"/login/patient"} component={PatientLogin} />
+      <Route path={"/login"} component={Login} />
+      <Route path={"/login/admin"}><LoginRedirect /></Route>
+      <Route path={"/login/patient"}><LoginRedirect /></Route>
       <Route path={"/role-selection"} component={RoleSelection} />
 
-      {/* Admin ICU Dashboard */}
-      <Route path={"/dashboard"} component={Dashboard} />
-      <Route path={"/dashboard/patients"} component={PatientsPage} />
+      {/* Admin ICU Dashboard — super_admin / admin only */}
+      <AuthRoute path={"/dashboard"} component={Dashboard} area="admin" />
+      <AuthRoute path={"/dashboard/patient-management"} component={PatientManagementPage} area="admin" />
+      <AuthRoute path={"/dashboard/doctor-management"} component={DoctorManagementPage} area="admin" />
+      <AuthRoute path={"/dashboard/patients"} component={PatientsPage} area="admin" />
 
-      {/* Patient detail (admin) — accessed by clicking a patient */}
-      <Route path={"/dashboard/patients/:patientId/reports/upload"} component={PatientDetailUploadPage} />
-      <Route path={"/dashboard/patients/:patientId/reports"} component={PatientReportsPage} />
-      <Route path={"/dashboard/patients/:patientId/trends"} component={PatientTrendsPage} />
-      <Route path={"/dashboard/patients/:patientId/medications"} component={PatientMedicationsDetailPage} />
-      <Route path={"/dashboard/patients/:patientId/doctors"} component={PatientDoctorsPage} />
-      <Route path={"/dashboard/patients/:patientId/family"} component={PatientFamilyPage} />
-      <Route path={"/dashboard/patients/:patientId"} component={PatientOverviewPage} />
+      <AuthRoute path={"/dashboard/patients/:patientId/reports/upload"} component={PatientDetailUploadPage} area="admin" />
+      <AuthRoute path={"/dashboard/patients/:patientId/reports"} component={PatientReportsPage} area="admin" />
+      <AuthRoute path={"/dashboard/patients/:patientId/trends"} component={PatientTrendsPage} area="admin" />
+      <AuthRoute path={"/dashboard/patients/:patientId/medications"} component={PatientMedicationsDetailPage} area="admin" />
+      <AuthRoute path={"/dashboard/patients/:patientId/doctors"} component={PatientDoctorsPage} area="admin" />
+      <AuthRoute path={"/dashboard/patients/:patientId/family"} component={PatientFamilyPage} area="admin" />
+      <AuthRoute path={"/dashboard/patients/:patientId"} component={PatientOverviewPage} area="admin" />
 
-      <Route path={"/dashboard/monitoring"} component={LiveMonitoringPage} />
-      <Route path={"/dashboard/waveforms"} component={WaveformsPage} />
-      <Route path={"/dashboard/medications"} component={MedicationsPage} />
-      <Route path={"/dashboard/alerts"} component={AlertsPage} />
-      <Route path={"/dashboard/settings"} component={SettingsPage} />
+      <AuthRoute path={"/dashboard/monitoring"} component={LiveMonitoringPage} area="admin" />
+      <AuthRoute path={"/dashboard/waveforms"} component={WaveformsPage} area="admin" />
+      <AuthRoute path={"/dashboard/medications"} component={MedicationsPage} area="admin" />
+      <AuthRoute path={"/dashboard/alerts"} component={AlertsPage} area="admin" />
+      <AuthRoute path={"/dashboard/settings"} component={SettingsPage} area="admin" />
 
-      {/* Legacy routes redirect to patients list */}
-      <Route path={"/dashboard/reports/upload"} component={UploadPastReportsPage} />
-      <Route path={"/dashboard/reports"} component={ReportsPage} />
-      <Route path={"/dashboard/trends"} component={HealthTrendsPage} />
-      <Route path={"/dashboard/doctors"} component={DoctorsPage} />
-      <Route path={"/dashboard/family"} component={FamilyContactsPage} />
+      <AuthRoute path={"/dashboard/reports/upload"} component={UploadPastReportsPage} area="admin" />
+      <AuthRoute path={"/dashboard/reports"} component={ReportsPage} area="admin" />
+      <AuthRoute path={"/dashboard/trends"} component={HealthTrendsPage} area="admin" />
+      <AuthRoute path={"/dashboard/doctors"} component={DoctorsPage} area="admin" />
+      <AuthRoute path={"/dashboard/family"} component={FamilyContactsPage} area="admin" />
 
-      {/* Patient portal */}
-      <Route path="/patient/dashboard" component={PatientDashboard} />
-      <Route path="/patient/overview" component={PatientPortalOverviewPage} />
-      <Route path="/patient/monitoring" component={PatientMonitoringPage} />
-      <Route path="/patient/waveforms" component={PatientWaveformsPage} />
-      <Route path="/patient/medications" component={PatientMedicationsPage} />
-      <Route path="/patient/alerts" component={PatientAlertsPage} />
-      <Route path="/patient/settings" component={PatientSettingsPage} />
-      <Route path="/patient/reports/upload" component={PatientPortalUploadPage} />
-      <Route path="/patient/reports" component={PatientPortalReportsPage} />
-      <Route path="/patient/trends" component={PatientPortalTrendsPage} />
-      <Route path="/patient/doctors" component={PatientPortalDoctorsPage} />
-      <Route path="/patient/family" component={PatientPortalFamilyPage} />
+      {/* Patient portal — patient only (admin can also access) */}
+      <AuthRoute path="/patient/dashboard" component={PatientDashboard} area="patient" />
+      <AuthRoute path="/patient/overview" component={PatientPortalOverviewPage} area="patient" />
+      <AuthRoute path="/patient/monitoring" component={PatientMonitoringPage} area="patient" />
+      <AuthRoute path="/patient/waveforms" component={PatientWaveformsPage} area="patient" />
+      <AuthRoute path="/patient/medications" component={PatientMedicationsPage} area="patient" />
+      <AuthRoute path="/patient/alerts" component={PatientAlertsPage} area="patient" />
+      <AuthRoute path="/patient/settings" component={PatientSettingsPage} area="patient" />
+      <AuthRoute path="/patient/reports/upload" component={PatientPortalUploadPage} area="patient" />
+      <AuthRoute path="/patient/reports" component={PatientPortalReportsPage} area="patient" />
+      <AuthRoute path="/patient/trends" component={PatientPortalTrendsPage} area="patient" />
+      <AuthRoute path="/patient/doctors" component={PatientPortalDoctorsPage} area="patient" />
+      <AuthRoute path="/patient/family" component={PatientPortalFamilyPage} area="patient" />
 
-      <ProtectedRoute path={"/doctor/dashboard"} component={DoctorDashboard} requiredRole="doctor" />
+      {/* Doctor dashboard */}
+      <AuthRoute path={"/doctor/dashboard"} component={DoctorDashboard} area="doctor" />
+
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

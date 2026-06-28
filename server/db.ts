@@ -1,6 +1,17 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, patients, vitals, medications, alerts, medicationReminders, complianceRecords } from "../drizzle/schema";
+import {
+  InsertUser,
+  users,
+  patients,
+  doctors,
+  auditLogs,
+  vitals,
+  medications,
+  alerts,
+  medicationReminders,
+  complianceRecords,
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -259,4 +270,160 @@ export async function updateComplianceRecord(complianceId: number, updates: Part
   if (!db) throw new Error("Database not available");
 
   return await db.update(complianceRecords).set(updates).where(eq(complianceRecords.id, complianceId));
+}
+
+// ─── Auth & user management ─────────────────────────────────────────────────
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createCredentialUser(data: {
+  openId: string;
+  username: string;
+  passwordHash: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  role: "patient" | "doctor" | "super_admin";
+  loginMethod?: string;
+}): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(users).values({
+    openId: data.openId,
+    username: data.username,
+    passwordHash: data.passwordHash,
+    name: data.name,
+    email: data.email,
+    phone: data.phone ?? null,
+    role: data.role,
+    loginMethod: data.loginMethod ?? "credentials",
+    isActive: true,
+    lastSignedIn: new Date(),
+  });
+
+  return Number(result[0].insertId);
+}
+
+export async function updateUser(userId: number, updates: Partial<typeof users.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(users).set(updates).where(eq(users.id, userId));
+}
+
+export async function deactivateUser(userId: number) {
+  return updateUser(userId, { isActive: false });
+}
+
+export async function deleteUser(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(users).where(eq(users.id, userId));
+}
+
+export async function getPatientCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` }).from(patients);
+  return Number(result[0]?.count ?? 0);
+}
+
+export async function getDoctorCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` }).from(doctors);
+  return Number(result[0]?.count ?? 0);
+}
+
+export async function getPatientById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(patients).where(eq(patients.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createPatientRecord(data: typeof patients.$inferInsert): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(patients).values(data);
+  return Number(result[0].insertId);
+}
+
+export async function deletePatient(patientId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(patients).where(eq(patients.id, patientId));
+}
+
+export async function getDoctorByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(doctors).where(eq(doctors.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createDoctorRecord(data: typeof doctors.$inferInsert): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(doctors).values(data);
+  return Number(result[0].insertId);
+}
+
+export async function getAllPatientsWithUsers() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const allPatients = await db.select().from(patients).orderBy(desc(patients.createdAt));
+  const result = [];
+
+  for (const patient of allPatients) {
+    const user = await getUserById(patient.userId);
+    let doctorName: string | null = null;
+    if (patient.assignedDoctorId) {
+      const docUser = await getUserById(patient.assignedDoctorId);
+      doctorName = docUser?.name ?? null;
+    }
+    result.push({ ...patient, user: user ? { id: user.id, name: user.name, email: user.email, username: user.username, isActive: user.isActive } : null, doctorName });
+  }
+
+  return result;
+}
+
+export async function getAllDoctorsWithUsers() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const allDoctors = await db.select().from(doctors).orderBy(desc(doctors.createdAt));
+  const result = [];
+
+  for (const doctor of allDoctors) {
+    const user = await getUserById(doctor.userId);
+    result.push({ ...doctor, user: user ? { id: user.id, name: user.name, email: user.email, username: user.username, isActive: user.isActive } : null });
+  }
+
+  return result;
+}
+
+export async function createAuditLog(data: typeof auditLogs.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(auditLogs).values(data);
+}
+
+export async function getAuditLogs(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(limit);
 }
