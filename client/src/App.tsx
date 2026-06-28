@@ -10,6 +10,8 @@ import Login from "./pages/Login";
 import RoleSelection from "./pages/RoleSelection";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import Dashboard from "./pages/dashboard/Dashboard";
+import Feedback from "./pages/Feedback";
+import FeedbackAnalytics from "./pages/dashboard/FeedbackAnalytics";
 import PatientsPage from "./pages/dashboard/PatientsPage";
 import PatientManagementPage from "./pages/dashboard/PatientManagementPage";
 import DoctorManagementPage from "./pages/dashboard/DoctorManagementPage";
@@ -44,6 +46,7 @@ import PatientPortalTrendsPage from "./pages/patient/PatientTrendsPage";
 import PatientPortalDoctorsPage from "./pages/patient/PatientDoctorsPage";
 import PatientPortalFamilyPage from "./pages/patient/PatientFamilyPage";
 import { VideoCallProvider } from "./contexts/VideoCallContext";
+import { CameraStreamProvider } from "./contexts/CameraStreamContext";
 import VideoCallWidget from "./components/VideoCallWidget";
 import { AuthRoute, LoginRedirect } from "./components/auth/AuthRoute";
 
@@ -55,11 +58,13 @@ function Router() {
       <Route path={"/login/admin"}><LoginRedirect /></Route>
       <Route path={"/login/patient"}><LoginRedirect /></Route>
       <Route path={"/role-selection"} component={RoleSelection} />
+      <Route path={"/feedback"} component={Feedback} />
 
       {/* Admin ICU Dashboard — super_admin / admin only */}
       <AuthRoute path={"/dashboard"} component={Dashboard} area="admin" />
       <AuthRoute path={"/dashboard/patient-management"} component={PatientManagementPage} area="admin" />
       <AuthRoute path={"/dashboard/doctor-management"} component={DoctorManagementPage} area="admin" />
+      <AuthRoute path={"/dashboard/feedback"} component={FeedbackAnalytics} area="admin" />
       <AuthRoute path={"/dashboard/patients"} component={PatientsPage} area="admin" />
 
       <AuthRoute path={"/dashboard/patients/:patientId/reports/upload"} component={PatientDetailUploadPage} area="admin" />
@@ -111,11 +116,13 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <CriticalAlertProvider>
           <VideoCallProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-              <VideoCallWidget />
-            </TooltipProvider>
+            <CameraStreamProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+                <VideoCallWidget />
+              </TooltipProvider>
+            </CameraStreamProvider>
           </VideoCallProvider>
         </CriticalAlertProvider>
       </ThemeProvider>

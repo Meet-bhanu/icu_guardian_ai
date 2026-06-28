@@ -15,6 +15,8 @@ import {
   X,
   Stethoscope,
   FileText,
+  MessageSquare,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -56,6 +58,7 @@ export const adminNavItems: NavItem[] = [
   { icon: Bell, label: "Alerts", path: "/dashboard/alerts" },
   { icon: FileText, label: "Reports", path: "/dashboard/reports" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
+  { icon: MessageSquare, label: "Feedback Analytics", path: "/dashboard/feedback" },
 ];
 
 export const patientNavItems: NavItem[] = [
@@ -65,6 +68,7 @@ export const patientNavItems: NavItem[] = [
   { icon: Pill, label: "Medications", path: "/patient/medications" },
   { icon: Bell, label: "Alerts", path: "/patient/alerts" },
   { icon: Settings, label: "Settings", path: "/patient/settings" },
+  { icon: MessageSquare, label: "Validation Feedback", path: "/feedback" },
 ];
 
 const patientDashboardRedirect: Record<string, string> = {
@@ -225,7 +229,16 @@ export default function AppLayout({
           </div>
 
           <div className="flex items-center gap-3 ml-auto">
-            <button className="relative p-2 rounded-lg hover:bg-accent text-foreground">
+            <Link href="/feedback">
+              <button 
+                title="Give Market Feedback"
+                className="relative px-3 py-1.5 rounded-lg hover:bg-primary/10 text-primary hover:text-primary transition-all flex items-center gap-1.5 border border-primary/20 bg-primary/5 text-xs font-bold shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
+                <span>Feedback</span>
+              </button>
+            </Link>
+            <button className="relative p-2 rounded-lg hover:bg-accent text-foreground shrink-0">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
             </button>

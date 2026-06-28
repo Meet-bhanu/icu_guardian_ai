@@ -36,6 +36,10 @@ export default function DoctorsContent({ patientId }: DoctorsContentProps) {
               </Avatar>
               <h3 className="font-semibold text-gray-900">{doctor.name}</h3>
               <p className="text-sm text-gray-500 mt-1">{doctor.specialty}</p>
+              <div className="mt-2 text-xs text-gray-400 space-y-0.5">
+                <p>{(doctor as any).email ?? `${doctor.name.toLowerCase().replace("dr. ", "").replace(" ", ".")}@hospital.com`}</p>
+                <p className="font-mono">{(doctor as any).phone ?? "+1 (555) 019-9238"}</p>
+              </div>
               <Badge
                 className={cn(
                   "mt-3 text-xs",

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CameraOff, RefreshCw, TriangleAlert, UserCheck, UserX, Phone } from "lucide-react";
+import { Camera, CameraOff, RefreshCw, TriangleAlert, UserCheck, UserX, Phone, Video, VideoOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import { playMissingPatientAlert } from "@/lib/medicationAlerts";
 import { toast } from "sonner";
 import { useVideoCall } from "@/contexts/VideoCallContext";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
+import { useCameraStream } from "@/contexts/CameraStreamContext";
 
 interface LiveCameraFeedProps {
   className?: string;
@@ -42,6 +43,7 @@ export default function LiveCameraFeed({
 
   const { call, startCall } = useVideoCall();
   const { isPatient, session } = usePatientAuth();
+  const { isBroadcasting, startBroadcast, stopBroadcast } = useCameraStream();
 
   const handleCallClick = () => {
     if (isPatient) {
@@ -71,7 +73,12 @@ export default function LiveCameraFeed({
     setActive(false);
     setSimulateBodyAbsence(false);
     updatePresence(false);
-  }, [updatePresence]);
+    
+    // Stop broadcast if active
+    if (isBroadcasting) {
+      stopBroadcast();
+    }
+  }, [updatePresence, isBroadcasting, stopBroadcast]);
 
   const startCamera = useCallback(async () => {
     setError(null);
@@ -90,12 +97,18 @@ export default function LiveCameraFeed({
       lastDetectedAtRef.current = Date.now();
       lastAlertAtRef.current = 0;
       updatePresence(true);
+
+      // Auto-start broadcast for patients
+      if (isPatient) {
+        const pId = session?.patientId ?? patientId ?? "P001";
+        startBroadcast(stream, pId);
+      }
     } catch {
       setError("Camera access denied. Please allow camera permission in your browser.");
       setActive(false);
       updatePresence(false);
     }
-  }, [updatePresence]);
+  }, [updatePresence, isPatient, session?.patientId, patientId, startBroadcast]);
 
   useEffect(() => {
     if (autoStart) {
@@ -253,7 +266,13 @@ export default function LiveCameraFeed({
             LIVE
           </Badge>
         )}
-        <div className="absolute bottom-3 left-20 z-30">
+        {isBroadcasting && (
+          <Badge className="absolute bottom-3 left-14 bg-blue-500 hover:bg-blue-500 text-white gap-1 z-30">
+            <Video className="w-3 h-3" />
+            BROADCASTING
+          </Badge>
+        )}
+        <div className="absolute bottom-3 left-auto right-16 z-30">
           <Badge
             className={cn(
               "gap-1",

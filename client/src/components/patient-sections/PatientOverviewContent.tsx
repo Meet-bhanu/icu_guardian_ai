@@ -6,9 +6,11 @@ import {
   Pill,
   Stethoscope,
   TrendingUp,
+  Video,
 } from "lucide-react";
 import { getPatientById } from "@/lib/patientData";
 import { usePatientAuth } from "@/hooks/usePatientAuth";
+import RemoteCameraViewer from "@/components/RemoteCameraViewer";
 
 const sections = [
   {
@@ -61,6 +63,21 @@ export default function PatientOverviewContent({ patientId }: PatientOverviewCon
 
   return (
     <div className="space-y-6">
+      {!isPatient && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Video className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-gray-900">Live Camera Monitoring</h2>
+          </div>
+          <RemoteCameraViewer 
+            patientId={patientId} 
+            patientName={patient.name}
+            className="w-full"
+            autoStart={false}
+          />
+        </Card>
+      )}
+
       <Card className="p-5">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Patient Summary</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

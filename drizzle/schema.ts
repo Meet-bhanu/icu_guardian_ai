@@ -230,3 +230,26 @@ export const auditLogs = mysqlTable("auditLogs", {
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+/**
+ * Feedback table for Market Validation & Product-Market Fit.
+ */
+export const feedback = mysqlTable("feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  userRole: varchar("userRole", { length: 50 }).notNull(),
+  overallExperience: int("overallExperience").notNull(),
+  easeOfUse: int("easeOfUse").notNull(),
+  aiAccuracy: int("aiAccuracy").notNull(),
+  uiDesign: int("uiDesign").notNull(),
+  recommend: varchar("recommend", { length: 10 }).notNull(),
+  useInHospital: varchar("useInHospital", { length: 10 }).notNull(),
+  likeMost: text("likeMost"),
+  problemsFaced: text("problemsFaced"),
+  suggestions: text("suggestions"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = typeof feedback.$inferInsert;

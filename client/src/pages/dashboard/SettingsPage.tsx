@@ -16,7 +16,7 @@ import { useState } from "react";
 export default function SettingsPage() {
   const [codeBlueEnabled, setCodeBlueEnabled] = useState(() => {
     if (typeof window === "undefined") return false;
-    return localStorage.getItem("icu-enable-code-blue") === "true";
+    return localStorage.getItem("icu-enable-code-blue") !== "false";
   });
 
   const handleToggleCodeBlue = (checked: boolean) => {

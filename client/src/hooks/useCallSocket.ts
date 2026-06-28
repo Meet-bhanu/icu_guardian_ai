@@ -2,6 +2,13 @@ import { useEffect, useRef, useCallback } from "react";
 import type { CallSocketEvent } from "../../../shared/calls";
 import { DEMO_ADMIN_TOKEN, demoPatientToken } from "../../../shared/calls";
 
+// Global WebSocket instance for camera streaming
+declare global {
+  interface Window {
+    callSocket?: WebSocket | null;
+  }
+}
+
 function getWebSocketUrl(token: string): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${protocol}//${window.location.host}/ws/calls?token=${encodeURIComponent(token)}`;
@@ -23,6 +30,11 @@ export function useCallSocket(
 
     const ws = new WebSocket(getWebSocketUrl(token));
     wsRef.current = ws;
+    
+    // Expose globally for camera streaming
+    if (typeof window !== "undefined") {
+      window.callSocket = ws;
+    }
 
     ws.onmessage = (event) => {
       try {
@@ -35,6 +47,9 @@ export function useCallSocket(
 
     ws.onclose = () => {
       wsRef.current = null;
+      if (typeof window !== "undefined") {
+        window.callSocket = null;
+      }
       if (token) {
         reconnectTimer.current = window.setTimeout(connect, 3000);
       }
