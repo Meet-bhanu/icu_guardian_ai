@@ -188,12 +188,38 @@ export function relayCameraAnswer(patientId: string, answer: RTCSessionDescripti
 
 export function relayCameraIceCandidate(patientId: string, candidate: RTCIceCandidateInit, socketId: string) {
   const normalizedId = patientId.toUpperCase();
-  const client = socketClients.get(Array.from(adminSockets).find(ws => socketIdMap.get(ws) === socketId) || Array.from(patientSockets.get(normalizedId) || []).find(ws => socketIdMap.get(ws) === socketId));
   
-  if (client?.role === "admin") {
+  // Find which socket sent this candidate
+  let senderRole: "admin" | "patient" | null = null;
+  
+  // Check if sender is admin
+  for (const ws of adminSockets) {
+    if (socketIdMap.get(ws) === socketId) {
+      senderRole = "admin";
+      break;
+    }
+  }
+  
+  // Check if sender is patient
+  if (!senderRole) {
+    const patientSocketsSet = patientSockets.get(normalizedId);
+    if (patientSocketsSet) {
+      for (const ws of patientSocketsSet) {
+        if (socketIdMap.get(ws) === socketId) {
+          senderRole = "patient";
+          break;
+        }
+      }
+    }
+  }
+  
+  // Relay to the opposite side
+  if (senderRole === "admin") {
     broadcastToPatient(normalizedId, { type: "camera-ice-candidate", patientId: normalizedId, candidate, socketId });
-  } else {
+  } else if (senderRole === "patient") {
     broadcastToAdmins({ type: "camera-ice-candidate", patientId: normalizedId, candidate, socketId });
+  } else {
+    console.warn("[Socket] Unknown sender for ICE candidate:", socketId);
   }
 }
 
