@@ -17,6 +17,9 @@ import {
   ShieldAlert,
   ArrowUpRight,
   Sparkles,
+  Video,
+  Phone,
+  X,
 } from "lucide-react";
 import {
   recentAlerts,
@@ -27,6 +30,7 @@ import { useLocation } from "wouter";
 import { getPatientsList } from "@/lib/patientData";
 import { setAdminSelectedPatientId } from "@/hooks/useAdminSelectedPatient";
 import { useEffect, useState } from "react";
+import VideoCallPage from "@/pages/VideoCallPage";
 
 const severityStyles = {
   critical: "bg-red-50 text-red-700 border-red-200/50 hover:bg-red-50",
@@ -65,10 +69,19 @@ function getPatientVitals(status: "Critical" | "Warning" | "Stable", seed: strin
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [patientsList, setPatientsList] = useState<any[]>([]);
+  const [showVideoCall, setShowVideoCall] = useState(false);
 
   useEffect(() => {
     setPatientsList(getPatientsList());
   }, []);
+
+  const handleVideoCall = () => {
+    setShowVideoCall(true);
+  };
+
+  const closeVideoCall = () => {
+    setShowVideoCall(false);
+  };
 
   const handlePatientSelect = (patientId: string) => {
     setAdminSelectedPatientId(patientId);
@@ -276,6 +289,39 @@ export default function Dashboard() {
           
           {/* Right Column: AI safety shield & Recent Alerts */}
           <div className="space-y-6 lg:col-span-1">
+            {/* Live Video Monitoring Card */}
+            <Card className="p-5 border-2 border-green-200 shadow-sm bg-green-50">
+              <div className="flex items-center justify-between mb-4 border-b border-green-200 pb-3">
+                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <Video className="w-5 h-5 text-green-600 animate-pulse" />
+                  Live Video Monitoring
+                </h2>
+                <Badge className="bg-green-100 text-green-700 border-green-300 text-[10px] font-bold">
+                  READY
+                </Badge>
+              </div>
+              
+              <div className="space-y-3">
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Start real-time video calls with patients using WebRTC encryption. Share the Room ID with patients to connect instantly.
+                </p>
+                
+                <Button 
+                  onClick={handleVideoCall}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold flex items-center justify-center gap-2"
+                >
+                  <Phone className="w-4 h-4" />
+                  Start Video Call
+                </Button>
+                
+                <div className="pt-2 border-t border-green-200 text-center">
+                  <p className="text-[10px] text-gray-500">
+                    🔒 End-to-end encrypted · No video storage
+                  </p>
+                </div>
+              </div>
+            </Card>
+
             {/* AI Status Card */}
             <Card className="p-5 border border-border shadow-sm">
               <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
@@ -377,6 +423,31 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Video Call Modal */}
+      {showVideoCall && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-green-50">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Video className="w-5 h-5 text-green-600" />
+                Live Video Call
+              </h3>
+              <Button
+                onClick={closeVideoCall}
+                variant="ghost"
+                size="icon"
+                className="hover:bg-red-100 hover:text-red-600"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="h-[calc(90vh-60px)] overflow-auto">
+              <VideoCallPage />
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
